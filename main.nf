@@ -31,6 +31,7 @@ workflow NFCORE_FSPTEST {
 
     take:
     samplesheet // channel: samplesheet read in from --input
+    tiara_input
 
     main:
 
@@ -38,10 +39,12 @@ workflow NFCORE_FSPTEST {
     // WORKFLOW: Run pipeline
     //
     FSPTEST (
-        samplesheet
+        samplesheet,
+        tiara_input
     )
     emit:
     multiqc_report = FSPTEST.out.multiqc_report // channel: /path/to/multiqc_report.html
+    classifications = FSPTEST.out.classifications
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +65,7 @@ workflow {
         args,
         params.outdir,
         params.input,
+        params.tiara_input,
         params.help,
         params.help_full,
         params.show_hidden
@@ -71,7 +75,8 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     NFCORE_FSPTEST (
-        PIPELINE_INITIALISATION.out.samplesheet
+        PIPELINE_INITIALISATION.out.samplesheet,
+        PIPELINE_INITIALISATION.out.tiara_input
     )
     //
     // SUBWORKFLOW: Run completion tasks

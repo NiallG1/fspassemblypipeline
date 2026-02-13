@@ -33,9 +33,11 @@ workflow PIPELINE_INITIALISATION {
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
     input             //  string: Path to input samplesheet
+    tiara_input        
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
+
 
     main:
 
@@ -116,8 +118,29 @@ workflow PIPELINE_INITIALISATION {
         }
         .set { ch_samplesheet }
 
+    //  ch_tiara_input = channel
+    //     .fromPath(
+    //         params.tiara_input ?: '' 
+            
+    //     )
+    //     .map { assembly ->
+    //         def meta = [id: assembly.simpleName]
+    //         [meta, assembly]
+    //     }    
+
+    ch_tiara_input = params.tiara_input 
+        ? channel.fromPath(params.tiara_input)
+            .map { assembly ->
+                def meta = [id: assembly.simpleName]
+                [meta, assembly]
+            }
+        : channel.empty()    
+
+    
+
     emit:
     samplesheet = ch_samplesheet
+    tiara_input = ch_tiara_input
     versions    = ch_versions
 }
 
