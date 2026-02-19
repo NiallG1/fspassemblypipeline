@@ -5,6 +5,7 @@
 */
 
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
+include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -21,6 +22,7 @@ workflow FSPASSEMBLYPIPELINE {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+    ch_tiara_input
     main:
 
     ch_versions = channel.empty()
@@ -33,6 +35,16 @@ workflow FSPASSEMBLYPIPELINE {
         ch_samplesheet
     )
     ch_versions = ch_versions.mix( PREPROCESSING.out.versions )
+
+    //
+    // SUBWORKFLOW: Contamination Detection
+    //
+
+    CONTAMINATION_DETECTION(ch_tiara_input)
+
+    //should there be a version here?
+
+
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
 
@@ -107,6 +119,7 @@ workflow FSPASSEMBLYPIPELINE {
     )
 
     emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    classifications = CONTAMINATION_DETECTION.out.classifications
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 
 }
