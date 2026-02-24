@@ -15,7 +15,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { FSPASSEMBLYPIPELINE  } from './workflows/fspassemblypipeline'
+include { FSPASSEMBLYPIPELINE     } from './workflows/fspassemblypipeline'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 /*
@@ -27,12 +27,16 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fspa
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
-workflow NFCORE_FSPTEST {
+workflow NFCORE_FSPASSEMBLYPIPELINE {
 
     take:
     samplesheet // channel: samplesheet read in from --input
     tiara_input
 
+   
+   
+   
+   
     main:
 
     //
@@ -44,7 +48,7 @@ workflow NFCORE_FSPTEST {
     )
     emit:
     multiqc_report = FSPASSEMBLYPIPELINE.out.multiqc_report // channel: /path/to/multiqc_report.html
-    classifications = FSPTEST.out.classifications
+    classifications = FSPASSEMBLYPIPELINE.out.classifications
 }
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,7 +78,7 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    NFCORE_FSPASSEMBLYPIPELINE (
+    FSPASSEMBLYPIPELINE (
         PIPELINE_INITIALISATION.out.samplesheet,
         PIPELINE_INITIALISATION.out.tiara_input
     )
@@ -88,7 +92,7 @@ workflow {
         params.outdir,
         params.monochrome_logs,
         params.hook_url,
-        NFCORE_FSPASSEMBLYPIPELINE.out.multiqc_report
+        FSPASSEMBLYPIPELINE.out.multiqc_report
     )
 }
 

@@ -228,6 +228,17 @@
     "properties": {
         "tiara_input": {
             "type": "string"
+        },
+        "db_path": {
+            "type": "string",
+            "default": "/home/nga10kg/FSP/pipeline/gx_test_db/test-only"
+        },
+        "taxid": {
+            "type": "integer",
+            "default": 5061
+        },
+        "ramdisk_path": {
+            "type": "string"
         }
     }
 }

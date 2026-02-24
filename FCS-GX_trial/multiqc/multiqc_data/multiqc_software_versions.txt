@@ -1,0 +1,5 @@
+Sample	falco	fastp	fastqc	nf-core/fspassemblypipeline	Nextflow
+FALCO	1.2.1				
+FASTP		1.0.1			
+FASTQC			0.12.1		
+Workflow				v1.0.0dev	25.10.4

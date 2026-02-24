@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+3	f1/11bdbb	-	FSPASSEMBLYPIPELINE:PREPROCESSING:FASTP (SAMPLE_FSP_PAIRED_END)	FAILED	-	-	-	-	-	-	-	-	-

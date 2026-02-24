@@ -1,0 +1,131 @@
+<!--
+  ~ Copyright 2013-2024, Seqera Labs
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<html>
+<head>
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+</head>
+<body>
+<pre class="mermaid" style="text-align: center;">
+%%{
+  init: {
+    'theme': 'base',
+    'themeVariables': {
+      'primaryColor': '#B6ECE2',
+      'primaryTextColor': '#160F26',
+      'primaryBorderColor': '#065647',
+      'lineColor': '#545555',
+      'clusterBkg': '#BABCBD22',
+      'clusterBorder': '#DDDEDE',
+      'fontFamily': 'arial'
+    }
+  }
+}%%
+flowchart TB
+    subgraph " "
+    v2["Channel.fromList"]
+    v7["Channel.fromPath"]
+    v18["discard_trimmed_pass"]
+    v19["save_trimmed_fail"]
+    v20["save_merged"]
+    v40["gxdb"]
+    v41["ramdisk_path"]
+    end
+    subgraph "FSPASSEMBLYPIPELINE [FSPASSEMBLYPIPELINE]"
+    subgraph "FSPASSEMBLYPIPELINE:PREPROCESSING [PREPROCESSING]"
+    v13(["FASTQC"])
+    v21(["FASTP"])
+    v28(["FALCO"])
+    v16(( ))
+    v17(( ))
+    end
+    subgraph "FSPASSEMBLYPIPELINE:CONTAMINATION_DETECTION [CONTAMINATION_DETECTION]"
+    v34(["TIARA_TIARA"])
+    v42(["FCSGX_RUNGX"])
+    v39(( ))
+    end
+    v32(( ))
+    end
+    subgraph " "
+    v14[" "]
+    v15[" "]
+    v22[" "]
+    v23[" "]
+    v24[" "]
+    v25[" "]
+    v26[" "]
+    v27[" "]
+    v29[" "]
+    v30[" "]
+    v33["ch_versions"]
+    v35[" "]
+    v36[" "]
+    v37[" "]
+    v38[" "]
+    v43[" "]
+    v44[" "]
+    v45[" "]
+    v46[" "]
+    v47[" "]
+    end
+    subgraph "PIPELINE_INITIALISATION [PIPELINE_INITIALISATION]"
+    v3(( ))
+    v8(( ))
+    end
+    v2 --> v3
+    v7 --> v8
+    v3 --> v13
+    v13 --> v15
+    v13 --> v14
+    v13 --> v16
+    v18 --> v21
+    v19 --> v21
+    v20 --> v21
+    v17 --> v21
+    v21 --> v28
+    v21 --> v27
+    v21 --> v26
+    v21 --> v25
+    v21 --> v24
+    v21 --> v23
+    v21 --> v22
+    v28 --> v30
+    v28 --> v29
+    v28 --> v16
+    v32 --> v33
+    v8 --> v34
+    v34 --> v38
+    v34 --> v37
+    v34 --> v36
+    v34 --> v35
+    v40 --> v42
+    v41 --> v42
+    v39 --> v42
+    v42 --> v47
+    v42 --> v46
+    v42 --> v45
+    v42 --> v44
+    v42 --> v43
+    v3 --> v17
+    v8 --> v39
+    v16 --> v32
+
+</pre>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, maxTextSize: Number.MAX_SAFE_INTEGER, maxEdges: Number.MAX_SAFE_INTEGER });
+</script>
+</body>
+</html>
