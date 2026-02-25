@@ -271,6 +271,14 @@
         "busco_lineage_specific": {
             "type": "string",
             "default": "basidiomycota_odb12"
+        },
+        "kmergenie_largest_kmer": {
+            "type": "integer",
+            "default": 121
+        },
+        "kmergenie_smallest_kmer": {
+            "type": "integer",
+            "default": 15
         }
     }
 }

@@ -6,6 +6,8 @@
 
 include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
+include { KMERGENIE                            } from '../../../modules/local/kmergenie/main'
+include { GETKMERGENIEK                         } from '../../../modules/local/getkmergeniek/main'
 include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES                               } from '../../../modules/nf-core/spades/main'
 include { MEGAHIT                              } from '../../../modules/nf-core/megahit/main'
@@ -28,6 +30,11 @@ workflow GENOME_ASSEMBLY {
     SEQKIT_STATS ( ch_fastp_reads )
 //    SEQKIT_STATS_MERGED
     FASTK_FASTK  ( ch_fastp_reads )
+
+    ch_input_reads_kmergenie = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    KMERGENIE    ( ch_input_reads_kmergenie )
+
+    GETKMERGENIEK ( KMERGENIE.out.html )
 
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
@@ -90,15 +97,17 @@ workflow GENOME_ASSEMBLY {
 
     emit:
     // TODO nf-core: edit emitted channels
-    seqkit_stats                 = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
-    fastk_ktab                   = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
-    fastk_hist                   = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds             = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    megahit_contigs              = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    minia_contigs                = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
-    renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
-    busco_batch_summary          = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
-    quast_results                = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
+    seqkit_stats                 = SEQKIT_STATS.out.stats                             // channel: [ val(meta), [ bam ] ]
+    kmergenie_html               = KMERGENIE.out.html                                 // channel: [ val(meta), path('*.html') ]
+    getkmergeniek_kmer_txt       = GETKMERGENIEK.out.kmer_txt                         // channel: [ val(meta), path('*.txt') ]
+    fastk_ktab                   = FASTK_FASTK.out.ktab                               // channel: [ val(meta), path('*.ktab') ]
+    fastk_hist                   = FASTK_FASTK.out.hist                               // channel: [ val(meta), path('*.hist') ]
+    spades_scaffolds             = SPADES.out.scaffolds                               // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    megahit_contigs              = MEGAHIT.out.contigs                                // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    minia_contigs                = MINIA.out.contigs                                  // channel: [ val(meta), path('*.contigs.fa') ]
+    renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies           // channel: [ val(meta), path('*.fa.gz') ]
+    busco_batch_summary          = BUSCO_BUSCO.out.batch_summary                      // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt                // channel: [ val(meta), path('short_summary.*.txt') ]
+    merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats                      // channel: [ val(meta), path('*.completeness.stats') ]
+    quast_results                = QUAST.out.results                                  // channel: [ val(meta), path("${prefix}") ]
 }
