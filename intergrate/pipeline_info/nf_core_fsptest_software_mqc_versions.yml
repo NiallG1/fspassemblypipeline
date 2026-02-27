@@ -1,9 +1,0 @@
-FALCO:
-  falco: 1.2.1
-FASTP:
-  fastp: 1.0.1
-FASTQC:
-  fastqc: 0.12.1
-Workflow:
-    nf-core/fspassemblypipeline: v1.0.0dev
-    Nextflow: 25.10.4

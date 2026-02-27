@@ -1,3 +1,0 @@
-task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
-3	4a/852a41	27038	FSPASSEMBLYPIPELINE:PREPROCESSING:FASTQC (SAMPLE_FSP_PAIRED_END)	FAILED	1	2026-02-24 12:35:30.632	486ms	463ms	-	-	-	-	-
-4	3d/c1b85f	27071	FSPASSEMBLYPIPELINE:PREPROCESSING:FASTP (SAMPLE_FSP_PAIRED_END)	FAILED	1	2026-02-24 12:35:31.150	404ms	364ms	-	-	-	-	-

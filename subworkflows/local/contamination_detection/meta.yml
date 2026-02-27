@@ -11,6 +11,8 @@ keywords:
 components:
   - samtools/sort
   - samtools/index
+  - fcsgx/rungx  
+  - tiara/tiara
 ## TODO nf-core: List all of the channels used as input with a description and their structure
 input:
   - ch_bam:
