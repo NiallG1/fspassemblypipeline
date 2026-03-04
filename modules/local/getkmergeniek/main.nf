@@ -29,7 +29,7 @@ process GETKMERGENIEK {
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
     echo $args
-    
+
     touch ${prefix}_best_kmer.txt
     """
 }
