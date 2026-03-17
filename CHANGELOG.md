@@ -24,8 +24,6 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 27/02/2026 - Created nf-core module for kmergenie
 - 03/03/2026 - Added kmergenie to the pipeline as nf-core module
 
-
-
 ### `Fixed`
 
 - 12/02/2026 - Renamed assemblies to avoid conflicts in downstream modules.
