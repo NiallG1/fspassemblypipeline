@@ -271,6 +271,13 @@
         "busco_lineage_specific": {
             "type": "string",
             "default": "basidiomycota_odb12"
+        },
+        "abyss_kmer": {
+            "type": "integer",
+            "default": 21
+        },
+        "abyss_extra_args": {
+            "type": "string"
         }
     }
 }
