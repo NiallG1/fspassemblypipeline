@@ -271,6 +271,26 @@
         "busco_lineage_specific": {
             "type": "string",
             "default": "basidiomycota_odb12"
+        },
+        "sparseassembler_kmer": {
+            "type": "integer",
+            "default": 21
+        },
+        "sparseassembler_genome_size": {
+            "type": "integer",
+            "default": 150000000
+        },
+        "sparseassembler_scaffold": {
+            "type": "integer",
+            "default": 1
+        },
+        "sparseassembler_expected_coverage": {
+            "type": "integer",
+            "default": 10
+        },
+        "sparseassembler_extra_args": {
+            "type": "string",
+            "default": "g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
         }
     }
 }
