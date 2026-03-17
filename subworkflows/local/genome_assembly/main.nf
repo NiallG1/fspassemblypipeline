@@ -44,14 +44,17 @@ workflow GENOME_ASSEMBLY {
     [],
     []
     )
+    ch_versions = SPADES.out.versions
 
     // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
     ch_input_reads_megahit = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
 
     MEGAHIT      ( ch_input_reads_megahit )
+    ch_versions = ch_versions.mix(MEGAHIT.out.versions)
 
     MINIA        ( ch_fastp_reads )
+    ch_versions = ch_versions.mix(MINIA.out.versions)
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
     def ch_draft_assemblies_input = SPADES.out.scaffolds.map { meta, scaffolds ->
@@ -97,17 +100,16 @@ workflow GENOME_ASSEMBLY {
 
     emit:
     // TODO nf-core: edit emitted channels
-    seqkit_stats                 = SEQKIT_STATS.out.stats                             // channel: [ val(meta), [ bam ] ]
-    kmergenie_html               = KMERGENIE.out.html                                 // channel: [ val(meta), path('*.html') ]
-    getkmergeniek_kmer_txt       = GETKMERGENIEK.out.kmer_txt                         // channel: [ val(meta), path('*.txt') ]
-    fastk_ktab                   = FASTK_FASTK.out.ktab                               // channel: [ val(meta), path('*.ktab') ]
-    fastk_hist                   = FASTK_FASTK.out.hist                               // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds             = SPADES.out.scaffolds                               // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    megahit_contigs              = MEGAHIT.out.contigs                                // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    minia_contigs                = MINIA.out.contigs                                  // channel: [ val(meta), path('*.contigs.fa') ]
-    renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies           // channel: [ val(meta), path('*.fa.gz') ]
-    busco_batch_summary          = BUSCO_BUSCO.out.batch_summary                      // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt                // channel: [ val(meta), path('short_summary.*.txt') ]
-    merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats                      // channel: [ val(meta), path('*.completeness.stats') ]
-    quast_results                = QUAST.out.results                                  // channel: [ val(meta), path("${prefix}") ]
+    seqkit_stats                 = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
+    fastk_ktab                   = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
+    fastk_hist                   = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
+    spades_scaffolds             = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    megahit_contigs              = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    minia_contigs                = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
+    busco_batch_summary          = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
+    merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
+    quast_results                = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
+    versions                     = ch_versions
 }
