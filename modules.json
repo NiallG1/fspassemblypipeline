@@ -32,7 +32,7 @@
                     },
                     "kmergenie": {
                         "branch": "master",
-                        "git_sha": "0d8121442b0addc2bd24201639120275b767e53e",
+                        "git_sha": "a035704d396cf4a22a8e28dfc9b3b371cf1aef05",
                         "installed_by": ["modules"]
                     },
                     "megahit": {
