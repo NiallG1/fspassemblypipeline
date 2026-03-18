@@ -50,7 +50,7 @@ workflow GENOME_ASSEMBLY {
     MINIA        ( ch_fastp_reads )
     ch_versions = ch_versions.mix(MINIA.out.versions)
 
-    SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_scaffold, params.sparseassembler_expected_coverage )
+    SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
 //    ch_versions = ch_versions.mix(SPARSEASSEMBLER.out.versions)   // this uses topic versions, the other modules should be updated.
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
@@ -70,10 +70,13 @@ workflow GENOME_ASSEMBLY {
         def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'minia', id: meta.id]
         return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
     } )
-    .mix( SPARSEASSEMBLER.out.scaffolds.map { meta, scaffolds ->
+    .mix( SPARSEASSEMBLER.out.scaffolds
+    .concat(SPARSEASSEMBLER.out.contigs)
+    .unique { meta, assembly -> meta.id }
+    .map { meta, assembly ->
         def assembler = 'sparseassembler'
         def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'sparseassembler', id: meta.id]
-        return [ new_meta, scaffolds, "${meta.id}_${assembler}.fa" ]
+        return [ new_meta, assembly, "${meta.id}_${assembler}.fa" ]
     } )
 
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )

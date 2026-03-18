@@ -11,12 +11,11 @@ process SPARSEASSEMBLER {
     tuple val(meta), path(reads)
     val kmersize
     val genome_size
-    val scaffold
     val expected_coverage
 
     output:
     tuple val(meta), path("*.contigs.fa.gz"), emit: contigs
-    tuple val(meta), path("*.scaffolds.fa.gz"), emit: scaffolds
+    tuple val(meta), path("*.scaffolds.fa.gz"), optional: true, emit: scaffolds
     tuple val(meta), path("*-sparseassembler.log"), emit: log
     tuple val("${task.process}"), val('sparseassembler'), eval("echo '20160205'"), topic: versions, emit: versions_sparseassembler
 
@@ -34,20 +33,13 @@ process SPARSEASSEMBLER {
     }
     """
     # Decompress input reads
-    if [[ "${reads}" == *.gz ]]; then
-        if [ "${meta.single_end}" = "true" ]; then
-            zcat ${reads} > ${prefix}_input.fastq
-        else
-            zcat ${reads[0]} > ${prefix}_R1.fastq
-            zcat ${reads[1]} > ${prefix}_R2.fastq
-        fi
+    decompress() { [[ "\$1" == *.gz ]] && zcat "\$1" || cat "\$1"; }
+
+    if [ "${meta.single_end}" = "true" ]; then
+    decompress "${reads}" > ${prefix}_input.fastq
     else
-        if [ "${meta.single_end}" = "true" ]; then
-            cat ${reads} > ${prefix}_input.fastq
-        else
-            cat ${reads[0]} > ${prefix}_R1.fastq
-            cat ${reads[1]} > ${prefix}_R2.fastq
-        fi
+    decompress "${reads[0]}"  > ${prefix}_R1.fastq
+    decompress "${reads[1]}"  > ${prefix}_R2.fastq
     fi
 
     SparseAssembler \\
@@ -55,7 +47,6 @@ process SPARSEASSEMBLER {
         k $kmersize \\
         GS $genome_size \\
         $input_reads \\
-        Scaffold $scaffold \\
         ExpCov $expected_coverage > ${prefix}-sparseassembler.log 2>&1
 
     # Compress outputs if they exist
@@ -70,9 +61,6 @@ process SPARSEASSEMBLER {
         gzip -c ${prefix}.scaffolds.fa > ${prefix}.scaffolds.fa.gz
         rm ${prefix}.scaffolds.fa
     fi
-
-    # Clean up temporary files
-    rm -f ${prefix}_input.fastq ${prefix}_R1.fastq ${prefix}_R2.fastq
     """
 
     stub:
