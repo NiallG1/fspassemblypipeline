@@ -290,7 +290,7 @@
         },
         "sparseassembler_extra_args": {
             "type": "string",
-            "default": "g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
+            "default": "Scaffold 1 g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
         }
     }
 }
