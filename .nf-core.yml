@@ -2,6 +2,9 @@ lint:
   files_exist:
     - conf/igenomes.config
     - conf/igenomes_ignored.config
+  files_unchanged:
+    - assets/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_light.png
 nf_core_version: 3.5.2
 repository_type: pipeline
 template:

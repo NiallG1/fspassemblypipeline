@@ -10,6 +10,7 @@ include { FASTK_FASTK                          } from '../../../modules/nf-core/
 include { SPADES                               } from '../../../modules/nf-core/spades/main'
 include { MEGAHIT                              } from '../../../modules/nf-core/megahit/main'
 include { MINIA                                } from '../../../modules/nf-core/minia/main'
+include { SPARSEASSEMBLER                      } from '../../../modules/local/sparseassembler/main'
 include { RENAME_ASSEMBLIES                    } from '../../../modules/local/rename_assemblies/main'
 include { BUSCO_BUSCO                          } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC        } from '../../../modules/nf-core/busco/busco/main'
@@ -49,6 +50,9 @@ workflow GENOME_ASSEMBLY {
     MINIA        ( ch_fastp_reads )
     ch_versions = ch_versions.mix(MINIA.out.versions)
 
+    SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
+//    ch_versions = ch_versions.mix(SPARSEASSEMBLER.out.versions)   // this uses topic versions, the other modules should be updated.
+
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
     def ch_draft_assemblies_input = SPADES.out.scaffolds.map { meta, scaffolds ->
         // add assembler name to meta.id to ensure unique output names
@@ -65,6 +69,14 @@ workflow GENOME_ASSEMBLY {
         def assembler = 'minia'
         def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'minia', id: meta.id]
         return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
+    } )
+    .mix( SPARSEASSEMBLER.out.scaffolds
+    .concat(SPARSEASSEMBLER.out.contigs)
+    .unique { meta, assembly -> meta.id }
+    .map { meta, assembly ->
+        def assembler = 'sparseassembler'
+        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'sparseassembler', id: meta.id]
+        return [ new_meta, assembly, "${meta.id}_${assembler}.fa" ]
     } )
 
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
@@ -99,6 +111,7 @@ workflow GENOME_ASSEMBLY {
     spades_scaffolds             = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
     megahit_contigs              = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
     minia_contigs                = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    sparseassembler_scaffolds    = SPARSEASSEMBLER.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
     renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
     busco_batch_summary          = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
     busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
