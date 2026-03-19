@@ -6,6 +6,8 @@
 
 include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
+include { KMERGENIE                            } from '../../../modules/nf-core/kmergenie/main'
+include { GETKMERGENIEK                         } from '../../../modules/local/getkmergeniek/main'
 include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES                               } from '../../../modules/nf-core/spades/main'
 include { MEGAHIT                              } from '../../../modules/nf-core/megahit/main'
@@ -29,6 +31,11 @@ workflow GENOME_ASSEMBLY {
     SEQKIT_STATS ( ch_fastp_reads )
 //    SEQKIT_STATS_MERGED
     FASTK_FASTK  ( ch_fastp_reads )
+
+    ch_input_reads_kmergenie = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    KMERGENIE    ( ch_fastp_reads )
+
+    GETKMERGENIEK ( KMERGENIE.out.html )
 
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
