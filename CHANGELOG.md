@@ -19,11 +19,11 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 12/02/2026 - Added BUSCO_BUSCO module.
 - 12/02/2026 - Added MERQURYFK_MERQURYFK module.
 - 12/02/2026 - Added QUAST module.
+- 17/03/2026 - Added sparseassembler as local module
 - 17/03/2026 - Added ABYSS_ABYSSPE
 
 ### `Fixed`
 
-- 09/02/2026 - Commented out ch_versions in fsptest.nf, as it was causing the failure of the test.
 - 12/02/2026 - Renamed assemblies to avoid conflicts in downstream modules.
 - 12/02/2026 - New output directory structure.
 - 12/02/2026 - User cans set extra params from `nextflow.config`.
