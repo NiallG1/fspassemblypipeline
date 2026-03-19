@@ -279,6 +279,14 @@
         "abyss_extra_args": {
             "type": "string"
         }, "default": null
+        "kmergenie_largest_kmer": {
+            "type": "integer",
+            "default": 121
+        },
+        "kmergenie_smallest_kmer": {
+            "type": "integer",
+            "default": 15
+        },
         "sparseassembler_kmer": {
             "type": "integer",
             "default": 21

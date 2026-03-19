@@ -35,6 +35,11 @@
                         "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
                         "installed_by": ["modules"]
                     },
+                    "kmergenie": {
+                        "branch": "master",
+                        "git_sha": "a035704d396cf4a22a8e28dfc9b3b371cf1aef05",
+                        "installed_by": ["modules"]
+                    },
                     "megahit": {
                         "branch": "master",
                         "git_sha": "4dd9d8439a429c7ee566e0e2347f76ddeef27e66",
