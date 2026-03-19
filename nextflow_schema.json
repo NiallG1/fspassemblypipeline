@@ -279,6 +279,7 @@
         "kmergenie_smallest_kmer": {
             "type": "integer",
             "default": 15
+        },
         "sparseassembler_kmer": {
             "type": "integer",
             "default": 21

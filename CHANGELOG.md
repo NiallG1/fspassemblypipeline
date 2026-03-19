@@ -19,26 +19,20 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 12/02/2026 - Added BUSCO_BUSCO module.
 - 12/02/2026 - Added MERQURYFK_MERQURYFK module.
 - 12/02/2026 - Added QUAST module.
-<<<<<<< kmergenie_module
 - 25/02/2026 - Added kmergenie local module.
 - 25/02/2026 - Added getkmergeniek local module.
 - 27/02/2026 - Created nf-core module for kmergenie
 - 03/03/2026 - Added kmergenie to the pipeline as nf-core module
-=======
 - 17/03/2026 - Added sparseassembler as local module
->>>>>>> dev
 
 ### `Fixed`
 
 - 12/02/2026 - Renamed assemblies to avoid conflicts in downstream modules.
 - 12/02/2026 - New output directory structure.
-<<<<<<< kmergenie_module
 - 12/02/2026 - User can set extra params from `nextflow.config`.
 - 13/03/2026 - fixed kmergenie nf-core module (missing log)
 - 17/03/2026 - removed tests and meta.yml from getkmergeniek local module as it's not needed
-=======
-- 12/02/2026 - User cans set extra params from `nextflow.config`.
->>>>>>> dev
+- 12/02/2026 - User can set extra params from `nextflow.config`.
 
 ### `Dependencies`
 
