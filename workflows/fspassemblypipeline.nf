@@ -123,7 +123,7 @@ workflow FSPASSEMBLYPIPELINE {
     )
 
     emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    classifications = CONTAMINATION_DETECTION.out.classifications
+    classifications = CONTAMINATION_DETECTION.out.tiara_classifications
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 
 }

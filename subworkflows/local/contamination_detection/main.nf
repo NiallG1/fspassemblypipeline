@@ -1,13 +1,10 @@
-// TODO nf-core: If in doubt look at other nf-core/subworkflows to see how we are doing things! :)
-//               https://github.com/nf-core/modules/tree/master/subworkflows
-//               You can also ask for help via your pull request or on the #subworkflows channel on the nf-core Slack workspace:
-//               https://nf-co.re/join
-// TODO nf-core: A subworkflow SHOULD import at least two modules
 
 //include { SAMTOOLS_SORT      } from '../../../modules/nf-core/samtools/sort/main'
 //include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/main'
 include   { TIARA_TIARA        } from '../../../modules/nf-core/tiara/tiara/main'
 include   { FCSGX_RUNGX        } from '../../../modules/nf-core/fcsgx/rungx/main' 
+include   { CONVERTFCSRPT      } from '../../../modules/local/convertfcsrpt/main'
+include   { COMPARISON         } from '../../../modules/local/comparison/main'
 
 workflow CONTAMINATION_DETECTION {
 
@@ -21,22 +18,31 @@ workflow CONTAMINATION_DETECTION {
     main:
     TIARA_TIARA(ch_tiara_input)  // call module
 
-     ch_fcs_gx = ch_tiara_input.map {meta, assembly -> [meta, params.taxid , assembly]}
+    ch_fcs_gx = ch_tiara_input.map {meta, assembly -> [meta, params.taxid , assembly]}
 
     
 
-    // Current (incorrect):
     FCSGX_RUNGX(ch_fcs_gx, params.db_path, params.ramdisk_path ?:[])
 
-    // Fixed - pass the directory containing the database:
-   // ch_gxdb_dir = file(params.db_path).parent  // Gets /home/nga10kg/FSP/pipeline/gx_test_db/test-only
-   // ch_gxdb_name = file(params.db_path).name   // Gets test-only
 
-    //FCSGX_RUNGX(ch_fcs_gx, ch_gxdb_dir, params.ramdisk_path ?:[])
+
+    CONVERTFCSRPT(FCSGX_RUNGX.out.taxonomy_report)
+
+    COMPARISON(
+    TIARA_TIARA.out.classifications,
+    CONVERTFCSRPT.out.fcs_report_reformatted
+)
     
     emit:
-    classifications  = TIARA_TIARA.out.classifications  
-    versions = TIARA_TIARA.out.versions 
+    tiara_classifications  = TIARA_TIARA.out.classifications
+    taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report   
+    fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted  
+    
+    // versions
+    versions = TIARA_TIARA.out.versions.mix(FCSGX_RUNGX.out.versions) 
+
+
+   
     
     
 }

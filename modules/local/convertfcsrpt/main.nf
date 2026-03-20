@@ -4,7 +4,7 @@ process CONVERTFCSRPT {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
-    container "quay.io/biocontainers/coreutils:8.25"
+    container "community.wave.seqera.io/library/coreutils:8.25--2471b967344e8d86"
 
     input:
     tuple val(meta), path(rpt)
