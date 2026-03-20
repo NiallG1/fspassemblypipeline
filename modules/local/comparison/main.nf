@@ -6,8 +6,7 @@ process COMPARISON {
     container "community.wave.seqera.io/library/r-base_r-data.table_r-dplr_r-stringr_r-tidyverse:27b5ede88e4d8afb"
 
     input:
-    tuple val(meta), path(classifications)
-    tuple val(meta), path(fcs_report_reformatted)
+    tuple val(meta), path(classifications), path(fcs_report_reformatted)
 
     output:
     tuple val(meta), path("*_tiara_vs_fcs_compare.tsv"), emit: comparison_table

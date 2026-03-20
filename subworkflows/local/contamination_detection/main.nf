@@ -11,8 +11,8 @@ workflow CONTAMINATION_DETECTION {
     take:
     // TODO nf-core: edit input (take) channels
     ch_tiara_input // [val(meta), path(assemblies)]
-    ch_ramdisk_path
-    ch_db_path // channel: val(gxdb)
+    _ch_ramdisk_path
+    _ch_db_path // channel: val(gxdb)
    
 
     main:
@@ -28,10 +28,11 @@ workflow CONTAMINATION_DETECTION {
 
     CONVERTFCSRPT(FCSGX_RUNGX.out.taxonomy_report)
 
-    COMPARISON(
-    TIARA_TIARA.out.classifications,
-    CONVERTFCSRPT.out.fcs_report_reformatted
-)
+   // Join the channels on the common meta key
+   ch_comparison_input = TIARA_TIARA.out.classifications
+    .join(CONVERTFCSRPT.out.fcs_report_reformatted)
+
+   COMPARISON(ch_comparison_input)
     
     emit:
     tiara_classifications  = TIARA_TIARA.out.classifications
