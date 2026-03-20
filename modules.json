@@ -5,6 +5,11 @@
         "https://github.com/nf-core/modules.git": {
             "modules": {
                 "nf-core": {
+                    "abyss/abysspe": {
+                        "branch": "master",
+                        "git_sha": "380cb90926b8c28558cb11479da5ff45bc4f1c5d",
+                        "installed_by": ["modules"]
+                    },
                     "busco/busco": {
                         "branch": "master",
                         "git_sha": "56925dff3062ca9387de65dd763568916b562124",

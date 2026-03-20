@@ -266,11 +266,18 @@
         },
         "quast_extra_args": {
             "type": "string",
-            "default": "--min-contig 100"
+            "default": "--min-contig 250"
         },
         "busco_lineage_specific": {
             "type": "string",
             "default": "basidiomycota_odb12"
+        },
+        "abyss_kmer": {
+            "type": "integer",
+            "default": 21
+        },
+        "abyss_extra_args": {
+            "type": "string"
         },
         "kmergenie_largest_kmer": {
             "type": "integer",
