@@ -4,6 +4,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
 include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
@@ -32,8 +33,16 @@ workflow FSPASSEMBLYPIPELINE {
     //
     // SUBWORKFLOW: Run PREPROCESSING
     //
+
+    ch_samplesheet = ch_samplesheet
+        .branch { meta, files ->
+            raw: meta.type == 'raw'
+            cleaned: meta.type == 'cleaned'
+            bam: meta.type == 'bam'
+        }
+
     PREPROCESSING (
-        ch_samplesheet
+        ch_samplesheet.raw
     )
     ch_versions = ch_versions.mix( PREPROCESSING.out.versions )
 
@@ -45,9 +54,14 @@ workflow FSPASSEMBLYPIPELINE {
     ch_tiara_input,
     params.ramdisk_path ?: [],
     params.db_path
-)
+    )
     //should there be a version here?
 
+
+    GENOME_ASSEMBLY (
+        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+    )
+    ch_versions = ch_versions.mix( GENOME_ASSEMBLY.out.versions )
 
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})

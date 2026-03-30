@@ -11,6 +11,25 @@
                         "installed_by": [
                             "modules"
                         ]
+                    "abyss/abysspe": {
+                        "branch": "master",
+                        "git_sha": "380cb90926b8c28558cb11479da5ff45bc4f1c5d",
+                        "installed_by": ["modules"]
+                    },
+                    "busco/busco": {
+                        "branch": "master",
+                        "git_sha": "56925dff3062ca9387de65dd763568916b562124",
+                        "installed_by": ["modules"]
+                    },
+                    "falco": {
+                        "branch": "master",
+                        "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+                        "installed_by": ["modules"]
+                    },
+                    "fastk/fastk": {
+                        "branch": "master",
+                        "git_sha": "3bed0255027a76609032ebc321465c94207ef8ed",
+                        "installed_by": ["modules"]
                     },
                     "fastp": {
                         "branch": "master",
@@ -33,6 +52,26 @@
                             "modules"
                         ]
                     },
+                    "kmergenie": {
+                        "branch": "master",
+                        "git_sha": "a035704d396cf4a22a8e28dfc9b3b371cf1aef05",
+                        "installed_by": ["modules"]
+                    },
+                    "megahit": {
+                        "branch": "master",
+                        "git_sha": "4dd9d8439a429c7ee566e0e2347f76ddeef27e66",
+                        "installed_by": ["modules"]
+                    },
+                    "merquryfk/merquryfk": {
+                        "branch": "master",
+                        "git_sha": "3bed0255027a76609032ebc321465c94207ef8ed",
+                        "installed_by": ["modules"]
+                    },
+                    "minia": {
+                        "branch": "master",
+                        "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+                        "installed_by": ["modules"]
+                    },
                     "multiqc": {
                         "branch": "master",
                         "git_sha": "af27af1be706e6a2bb8fe454175b0cdf77f47b49",
@@ -46,6 +85,21 @@
                         "installed_by": [
                             "modules"
                         ]
+                    },
+                    "quast": {
+                        "branch": "master",
+                        "git_sha": "55cca688337cfaec60e8cd32021bb4cd19f3a501",
+                        "installed_by": ["modules"]
+                    },
+                    "seqkit/stats": {
+                        "branch": "master",
+                        "git_sha": "28935b89b7e1f19e835f8c6e4c8322d4b505dded",
+                        "installed_by": ["modules"]
+                    },
+                    "spades": {
+                        "branch": "master",
+                        "git_sha": "4dd9d8439a429c7ee566e0e2347f76ddeef27e66",
+                        "installed_by": ["modules"]
                     }
                 }
             },
