@@ -4,6 +4,8 @@
 # Tiara vs FCS-GX comparison and visualization script version 7
 # =====================================================================
 
+# written by @NiallG1 on 27/03/2026
+
 #install package
 library(dplyr)
 library(ggplot2)
@@ -133,7 +135,7 @@ df_fcs_collapsed <- df_fcs_collapsed %>%
   arrange(as.numeric(stringr::str_extract(seq_id, "(?<=NODE_)\\d+")))
 
 # ------------------------------
-# Step 4: Process Tiara results 
+# Step 4: Process Tiara results
 # ------------------------------
 df_tiara <- tiara %>%
   mutate(
