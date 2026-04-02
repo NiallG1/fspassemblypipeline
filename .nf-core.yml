@@ -5,6 +5,8 @@ lint:
   files_unchanged:
     - assets/nf-core-fspassemblypipeline_logo_light.png
     - docs/images/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_dark.png
+    - .gitignore
 nf_core_version: 3.5.2
 repository_type: pipeline
 template:
