@@ -17,12 +17,17 @@
                     },
                     "falco": {
                         "branch": "master",
-                        "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+                        "git_sha": "b2f164ca59b14d6e9ed2dd2a99fa015085396faf",
                         "installed_by": ["modules"]
                     },
                     "fastk/fastk": {
                         "branch": "master",
                         "git_sha": "3bed0255027a76609032ebc321465c94207ef8ed",
+                        "installed_by": ["modules"]
+                    },
+                    "fastk/histex": {
+                        "branch": "master",
+                        "git_sha": "1838663f8c38ccd7833be0df0e53a26b7c72b567",
                         "installed_by": ["modules"]
                     },
                     "fastp": {
@@ -33,6 +38,11 @@
                     "fastqc": {
                         "branch": "master",
                         "git_sha": "41dfa3f7c0ffabb96a6a813fe321c6d1cc5b6e46",
+                        "installed_by": ["modules"]
+                    },
+                    "genescopefk": {
+                        "branch": "master",
+                        "git_sha": "0110646d0f733d87d8996260cf87d91b7ea2651c",
                         "installed_by": ["modules"]
                     },
                     "kmergenie": {
