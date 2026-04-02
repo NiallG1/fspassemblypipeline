@@ -70,7 +70,7 @@ output:
         FastK k-table files.
         Structure: [ val(meta), path("*.ktab*") ]
       pattern: "*.ktab*"
-  - genomescope_summary:
+  - genescopefk_summary:
       type: file
       description: |
         GeneScopeFK summary reports.
