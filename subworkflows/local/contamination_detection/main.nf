@@ -1,53 +1,44 @@
-
-//include { SAMTOOLS_SORT      } from '../../../modules/nf-core/samtools/sort/main'
-//include { SAMTOOLS_INDEX     } from '../../../modules/nf-core/samtools/index/main'
-include   { TIARA_TIARA        } from '../../../modules/nf-core/tiara/tiara/main'
-include   { FCSGX_RUNGX        } from '../../../modules/nf-core/fcsgx/rungx/main' 
-include   { CONVERTFCSRPT      } from '../../../modules/local/convertfcsrpt/main'
-include   { COMPARISON         } from '../../../modules/local/comparison/main'
+include { TIARA_TIARA        } from '../../../modules/nf-core/tiara/tiara/main'
+include { FCSGX_RUNGX        } from '../../../modules/nf-core/fcsgx/rungx/main' 
+include { CONVERTFCSRPT      } from '../../../modules/local/convertfcsrpt/main'
+include { COMPARISON         } from '../../../modules/local/comparison/main'
 
 workflow CONTAMINATION_DETECTION {
 
     take:
-    // TODO nf-core: edit input (take) channels
-    ch_tiara_input // [val(meta), path(assemblies)]
-    _ch_ramdisk_path
-    _ch_db_path // channel: val(gxdb)
+    ch_fasta            // channel: [val(meta), path(fasta)] - genome assemblies
+    ch_ramdisk_path     // value: ramdisk path or empty list
+    ch_db_path          // value: database path
    
-
     main:
-    TIARA_TIARA(ch_tiara_input)  // call module
+    // Run Tiara classification
+    TIARA_TIARA(ch_fasta)
 
-    ch_fcs_gx = ch_tiara_input.map {meta, assembly -> [meta, params.taxid , assembly]}
+    // Prepare input for FCS-GX: use per-sample taxon_id from metadata, fall back to global params.taxid
+    ch_fcs_gx = ch_fasta.map { meta, assembly -> 
+        def taxid = meta.taxon_id ?: params.taxid
+        [meta, taxid, assembly]
+    }
 
-    
+    // Run FCS-GX contamination screening
+    FCSGX_RUNGX(ch_fcs_gx, ch_db_path, ch_ramdisk_path)
 
-    FCSGX_RUNGX(ch_fcs_gx, params.db_path, params.ramdisk_path ?:[])
-
-
-
+    // Convert FCS-GX report format
     CONVERTFCSRPT(FCSGX_RUNGX.out.taxonomy_report)
 
-   // Join the channels on the common meta key
-   ch_comparison_input = TIARA_TIARA.out.classifications
-    .join(CONVERTFCSRPT.out.fcs_report_reformatted)
+    // Compare Tiara and FCS-GX results
+    ch_comparison_input = TIARA_TIARA.out.classifications
+        .join(CONVERTFCSRPT.out.fcs_report_reformatted)
 
-   COMPARISON(ch_comparison_input)
+    COMPARISON(ch_comparison_input)
     
     emit:
     tiara_classifications  = TIARA_TIARA.out.classifications
     taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report   
     fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted  
     
-    // versions
     versions = TIARA_TIARA.out.versions.mix(FCSGX_RUNGX.out.versions) 
-
-
-   
-    
-    
 }
-
 
 
 

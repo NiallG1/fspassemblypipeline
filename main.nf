@@ -24,19 +24,13 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fspa
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
 workflow NFCORE_FSPASSEMBLYPIPELINE {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
-    tiara_input
+    samplesheet // channel: reads for preprocessing/assembly
+    fasta       // channel: genome assemblies for contamination detection
+    bam         // channel: BAM files for processing
 
-   
-   
-   
-   
     main:
 
     //
@@ -44,12 +38,15 @@ workflow NFCORE_FSPASSEMBLYPIPELINE {
     //
     FSPASSEMBLYPIPELINE (
         samplesheet,
-        tiara_input
+        fasta,
+        bam
     )
+    
     emit:
-    multiqc_report = FSPASSEMBLYPIPELINE.out.multiqc_report // channel: /path/to/multiqc_report.html
+    multiqc_report  = FSPASSEMBLYPIPELINE.out.multiqc_report // channel: /path/to/multiqc_report.html
     classifications = FSPASSEMBLYPIPELINE.out.classifications
 }
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -68,8 +65,7 @@ workflow {
         params.monochrome_logs,
         args,
         params.outdir,
-        params.input,
-        params.tiara_input,
+        params.input,              // ✅ Single unified samplesheet
         params.help,
         params.help_full,
         params.show_hidden
@@ -79,9 +75,11 @@ workflow {
     // WORKFLOW: Run main workflow
     //
     FSPASSEMBLYPIPELINE (
-        PIPELINE_INITIALISATION.out.samplesheet,
-        PIPELINE_INITIALISATION.out.tiara_input
+        PIPELINE_INITIALISATION.out.samplesheet,  // reads for preprocessing/assembly
+        PIPELINE_INITIALISATION.out.fasta,        // genomes for contamination detection
+        PIPELINE_INITIALISATION.out.bam           // bams for processing
     )
+    
     //
     // SUBWORKFLOW: Run completion tasks
     //
@@ -101,3 +99,4 @@ workflow {
     THE END
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+

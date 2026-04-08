@@ -1,19 +1,19 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
 name: "contamination_detection"
-## TODO nf-core: Add a description of the subworkflow and list keywords
+
 description: Sort SAM/BAM/CRAM file
 keywords:
   - sort
   - bam
   - sam
   - cram
-## TODO nf-core: Add a list of the modules and/or subworkflows used in the subworkflow
+
 components:
   - samtools/sort
   - samtools/index
   - fcsgx/rungx  
   - tiara/tiara
-## TODO nf-core: List all of the channels used as input with a description and their structure
+
 input:
   - ch_bam:
       type: file

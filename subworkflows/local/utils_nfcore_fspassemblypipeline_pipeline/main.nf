@@ -32,8 +32,7 @@ workflow PIPELINE_INITIALISATION {
     monochrome_logs   // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
-    input             //  string: Path to input samplesheet
-    tiara_input        
+    input             //  string: Path to input samplesheet      
     help              // boolean: Display help message and exit
     help_full         // boolean: Show the full help message
     show_hidden       // boolean: Show hidden parameters in the help message
@@ -98,52 +97,64 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
 
+//
+// Create channels from input file provided through params.input
+//
+
     channel
-        .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
-        .map {
-            meta, file_1, file_2, fasta ->
-                if ( meta.type == 'bam') {
-                    return [ meta, [ fasta, file_1 ] ]
-                } else if (!file_2) {
-                    return [ meta.id, meta + [ single_end:true ], [ file_1 ] ]
-                } else {
-                    return [ meta.id, meta + [ single_end:false ], [ file_1, file_2 ] ]
-                }
-        }
-        .groupTuple()
-        .map { samplesheet ->
-            validateInputSamplesheet(samplesheet)
-        }
-        .map {
-            meta, fastqs ->
-                return [ meta, fastqs.flatten() ]
-        }
-        .set { ch_samplesheet }
+    .fromList(samplesheetToList(params.input, "${projectDir}/assets/schema_input.json"))
+    .branch { meta, fastq_1, fastq_2, fasta, bam, busco ->
+        // Genome assemblies for contamination detection
+        genome: meta.type == 'genome' && fasta
+            def genome_meta = [
+                id: meta.id,
+                taxon_id: meta.taxon_id,
+                type: meta.type,
+                busco: busco ?: null,
+                bam: bam ?: null
+            ]
+            return [genome_meta, file(fasta)]
+        
+        // BAM files
+        bam: meta.type == 'bam' && bam
+            return [meta, file(bam)]
+        
+        // Single-end reads
+        single_end: (meta.type == 'raw' || meta.type == 'cleaned') && fastq_1 && !fastq_2
+            return [meta.id, meta + [single_end: true], [file(fastq_1)]]
+        
+        // Paired-end reads
+        paired_end: (meta.type == 'raw' || meta.type == 'cleaned') && fastq_1 && fastq_2
+            return [meta.id, meta + [single_end: false], [file(fastq_1), file(fastq_2)]]
+        
+        other: true
+            return null
+    }
+    .set { ch_branched }
 
-    //  ch_tiara_input = channel
-    //     .fromPath(
-    //         params.tiara_input ?: '' 
-            
-    //     )
-    //     .map { assembly ->
-    //         def meta = [id: assembly.simpleName]
-    //         [meta, assembly]
-    //     }    
+// Genome FASTA files for contamination detection
+    ch_fasta = ch_branched.genome.filter { it != null }
 
-    ch_tiara_input = params.tiara_input 
-        ? channel.fromPath(params.tiara_input)
-            .map { assembly ->
-                def meta = [id: assembly.simpleName]
-                [meta, assembly]
-            }
-        : channel.empty()    
+// BAM files
+    ch_bam = ch_branched.bam.filter { it != null }
 
-    
+// Reads for preprocessing/assembly pipeline
+    ch_samplesheet = ch_branched.single_end
+    .mix(ch_branched.paired_end)
+    .filter { it != null }
+    .groupTuple()
+    .map { samplesheet ->
+        validateInputSamplesheet(samplesheet)
+    }
+    .map { meta, fastqs ->
+        return [meta, fastqs.flatten()]
+    }
 
     emit:
-    samplesheet = ch_samplesheet
-    tiara_input = ch_tiara_input
-    versions    = ch_versions
+    samplesheet = ch_samplesheet  // For PREPROCESSING + GENOME_ASSEMBLY
+    fasta = ch_fasta               // For CONTAMINATION_DETECTION
+    bam = ch_bam                   // For BAM processing
+    versions = ch_versions    
 }
 
 /*
