@@ -23,15 +23,8 @@ process FQSTAT {
     """
 
     stub:
-    def fastq_file_list = fastq_files instanceof List ? fastq_files : [fastq_files]
-    def stat_stubs = fastq_file_list.collect { fq ->
-        def base = fq.getName()
-        """
-        cat <<'EOF' > "${meta.id}_${base}.stats"
-Total: 0
-Average: 0
-EOF
-        """.stripIndent().trim()
+    def stat_stubs = [fastq_files].flatten().collect { fq ->
+        "touch \"${meta.id}_${fq.getName()}.stats\""
     }.join('\n')
     """
     ${stat_stubs}
