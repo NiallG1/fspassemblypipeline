@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https://nf-co.re/) template.
 
 ### `Added`
+added tiara module and test data
 
 - 09/02/2026 - Initialised GENOME_ASSEMBLY subworkflow.
 - 09/02/2026 - Added SEQKIT_STATS module.

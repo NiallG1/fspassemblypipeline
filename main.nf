@@ -15,7 +15,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { FSPASSEMBLYPIPELINE  } from './workflows/fspassemblypipeline'
+include { FSPASSEMBLYPIPELINE     } from './workflows/fspassemblypipeline'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 /*
@@ -24,13 +24,12 @@ include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_fspa
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-//
-// WORKFLOW: Run main analysis pipeline depending on type of input
-//
 workflow NFCORE_FSPASSEMBLYPIPELINE {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
+    samplesheet // channel: reads for preprocessing/assembly
+    fasta       // channel: genome assemblies for contamination detection
+    bam         // channel: BAM files for processing
 
     main:
 
@@ -38,11 +37,16 @@ workflow NFCORE_FSPASSEMBLYPIPELINE {
     // WORKFLOW: Run pipeline
     //
     FSPASSEMBLYPIPELINE (
-        samplesheet
+        samplesheet,
+        fasta,
+        bam
     )
+    
     emit:
-    multiqc_report = FSPASSEMBLYPIPELINE.out.multiqc_report // channel: /path/to/multiqc_report.html
+    multiqc_report  = FSPASSEMBLYPIPELINE.out.multiqc_report // channel: /path/to/multiqc_report.html
+    classifications = FSPASSEMBLYPIPELINE.out.classifications
 }
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -61,7 +65,7 @@ workflow {
         params.monochrome_logs,
         args,
         params.outdir,
-        params.input,
+        params.input,              // ✅ Single unified samplesheet
         params.help,
         params.help_full,
         params.show_hidden
@@ -70,9 +74,12 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    NFCORE_FSPASSEMBLYPIPELINE (
-        PIPELINE_INITIALISATION.out.samplesheet
+    FSPASSEMBLYPIPELINE (
+        PIPELINE_INITIALISATION.out.samplesheet,  // reads for preprocessing/assembly
+        PIPELINE_INITIALISATION.out.fasta,        // genomes for contamination detection
+        PIPELINE_INITIALISATION.out.bam           // bams for processing
     )
+    
     //
     // SUBWORKFLOW: Run completion tasks
     //
@@ -83,7 +90,7 @@ workflow {
         params.outdir,
         params.monochrome_logs,
         params.hook_url,
-        NFCORE_FSPASSEMBLYPIPELINE.out.multiqc_report
+        FSPASSEMBLYPIPELINE.out.multiqc_report
     )
 }
 
@@ -92,3 +99,4 @@ workflow {
     THE END
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+

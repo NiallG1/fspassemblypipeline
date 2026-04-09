@@ -6,6 +6,7 @@
 
 include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
+include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -21,41 +22,65 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_fspa
 workflow FSPASSEMBLYPIPELINE {
 
     take:
-    ch_samplesheet // channel: samplesheet read in from --input
+    ch_samplesheet // channel: reads for preprocessing/assembly [[meta], [fastq files]]
+    ch_fasta       // channel: genome assemblies for contamination detection [[meta], fasta]
+    ch_bam         // channel: BAM files for processing [[meta], bam]
+
     main:
 
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
 
     //
-    // SUBWORKFLOW: Run PREPROCESSING
+    // SUBWORKFLOW: Run PREPROCESSING on raw reads only
     //
-
-    ch_samplesheet = ch_samplesheet
+    // Branch samplesheet by type (raw vs cleaned)
+    ch_samplesheet
         .branch { meta, files ->
             raw: meta.type == 'raw'
+                return [meta, files]
             cleaned: meta.type == 'cleaned'
-            bam: meta.type == 'bam'
+                return [meta, files]
         }
+        .set { ch_reads }
 
     PREPROCESSING (
-        ch_samplesheet.raw
+        ch_reads.raw
     )
-    ch_versions = ch_versions.mix( PREPROCESSING.out.versions )
+    ch_versions = ch_versions.mix(PREPROCESSING.out.versions)
 
-
+    //
+    // SUBWORKFLOW: GENOME_ASSEMBLY
+    // Mix preprocessed reads with already-cleaned reads
+    //
     GENOME_ASSEMBLY (
-        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+        PREPROCESSING.out.fastp_reads.mix(ch_reads.cleaned)
     )
-    ch_versions = ch_versions.mix( GENOME_ASSEMBLY.out.versions )
+    ch_versions = ch_versions.mix(GENOME_ASSEMBLY.out.versions)
 
+    //
+    // SUBWORKFLOW: Contamination Detection
+    // Process genome assemblies from the fasta channel
+    //
+    CONTAMINATION_DETECTION (
+        ch_fasta,                    // Use the fasta channel from PIPELINE_INITIALISATION
+        params.ramdisk_path ?: [],
+        params.db_path
+    )
+    ch_versions = ch_versions.mix(CONTAMINATION_DETECTION.out.versions)
 
-    // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
+    //
+    // TODO: Add BAM processing subworkflow here
+    //
+    // BAM_PROCESSING (
+    //     ch_bam
+    // )
+    // ch_versions = ch_versions.mix(BAM_PROCESSING.out.versions)
 
     //
     // Collate and save software versions
     //
-    def topic_versions = Channel.topic("versions")
+    def topic_versions = channel.topic("versions")
         .distinct()
         .branch { entry ->
             versions_file: entry instanceof Path
@@ -82,7 +107,6 @@ workflow FSPASSEMBLYPIPELINE {
             sort: true,
             newLine: true
         ).set { ch_collated_versions }
-
 
     //
     // MODULE: MultiQC
@@ -124,9 +148,10 @@ workflow FSPASSEMBLYPIPELINE {
         []
     )
 
-    emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
-
+    emit:
+    multiqc_report  = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
+    classifications = CONTAMINATION_DETECTION.out.tiara_classifications
+    versions        = ch_versions                 // channel: [ path(versions.yml) ]
 }
 
 /*

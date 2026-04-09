@@ -9,3 +9,7 @@ testing*
 .nf-test*
 null/
 preprocessing_only.nf
+tiara-trial/**
+fcs-gx_trial/**
+out_**
+assets/
