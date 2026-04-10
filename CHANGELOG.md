@@ -66,6 +66,7 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 31/03/2026 - Moved the large raw reads and bam to large file system (lfs), and stored as lfs pointers.
 - 01/04/2026 - Split the preprocessing PR to four parts, each part origins from newly forked dev from kew repository.
 - 02/04/2026 - Merged local modules and samplesheet PR, updating the part of local modules.
+- 10/04/2026 - updated samplesheet and updated the following modules to latest version and use topic channels: busco, fastp, megahit, minia, quast, seqkit, spades, multiqc.
 
 ### `Dependencies`
 
