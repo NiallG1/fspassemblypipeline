@@ -20,12 +20,9 @@ workflow PREPROCESSING {
 
     main:
 
-    ch_versions = channel.empty()
-
     FALCO_RAW (
         ch_samplesheet
     )
-    ch_versions = ch_versions.mix( FALCO_RAW.out.versions_falco )
 
     // FASTP expects [meta, reads, adapter_fasta].
     def fastp_adapter_fasta = params.fastp_adapter_fasta ? file(params.fastp_adapter_fasta, checkIfExists: true) : []
@@ -39,7 +36,6 @@ workflow PREPROCESSING {
         false,
         false
     )
-    ch_versions = ch_versions.mix( FASTP_TRIM.out.versions_fastp )
 
     // Step 2: merge from trimmed reads while retaining unmerged and merged outputs.
     ch_samplesheet_fastp_merge = FASTP_TRIM.out.reads.map { meta, reads -> [ meta, reads, [] ] }
@@ -50,17 +46,14 @@ workflow PREPROCESSING {
         false,
         true
     )
-    ch_versions = ch_versions.mix( FASTP_MERGE.out.versions_fastp )
 
     FALCO_AFTER_FASTP (
         FASTP_TRIM.out.reads
     )
-    ch_versions = ch_versions.mix( FALCO_AFTER_FASTP.out.versions_falco )
 
     FALCO_AFTER_MERGE (
         FASTP_MERGE.out.reads_merged
     )
-    ch_versions = ch_versions.mix( FALCO_AFTER_MERGE.out.versions_falco )
 
     ch_falco_qc_compiling_input = FALCO_RAW.out.txt
         .flatMap { meta, txt_files ->
@@ -108,22 +101,18 @@ workflow PREPROCESSING {
     FASTK_FASTK (
         FASTP_TRIM.out.reads
     )
-    ch_versions = ch_versions.mix( FASTK_FASTK.out.versions_fastk )
 
     FASTK_HISTEX (
         FASTK_FASTK.out.hist
     )
-    ch_versions = ch_versions.mix( FASTK_HISTEX.out.versions_fastk )
 
     GENESCOPEFK_P1 (
         FASTK_HISTEX.out.hist
     )
-    ch_versions = ch_versions.mix( GENESCOPEFK_P1.out.versions_genescopefk )
 
     GENESCOPEFK_P2 (
         FASTK_HISTEX.out.hist
     )
-    ch_versions = ch_versions.mix( GENESCOPEFK_P2.out.versions_genescopefk )
 // Prepare a mixed channel of FastK histograms and GeneScopeFK summaries for KMER_STAT_SUMMARY.
 
     ch_fastk_hist_input = FASTK_HISTEX.out.hist
@@ -179,5 +168,4 @@ workflow PREPROCESSING {
     histex_txt             = FASTK_HISTEX.out.hist
     genescopefk_summary    = GENESCOPEFK_P1.out.summary.mix( GENESCOPEFK_P2.out.summary )
     kmer_stats_summary     = KMER_STAT_SUMMARY.out.summary
-    versions               = ch_versions
 }
