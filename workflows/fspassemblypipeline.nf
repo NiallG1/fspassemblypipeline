@@ -6,12 +6,12 @@
 
 include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
+include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
-
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -48,6 +48,17 @@ workflow FSPASSEMBLYPIPELINE {
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
     ch_versions = ch_versions.mix( GENOME_ASSEMBLY.out.versions )
+
+    // will add section for mixing emits from assembly and samplesheet when previous sections are finished
+    //CONTAMINATION_DETECTION (
+    //    GENOME_ASSEMBLY.out.best_assembly.mix(ch_samplesheet.cleaned)
+    //)
+    //ch_versions = ch_versions.mix( CONTAMINATION_DETECTION.out.versions )
+
+
+    CONTAMINATION_DETECTION (ch_samplesheet.bam)
+    
+    ch_versions = ch_versions.mix( CONTAMINATION_DETECTION.out.versions )
 
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
