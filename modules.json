@@ -35,6 +35,11 @@
                         "git_sha": "1fb5a73bce8e4ac7079b0a9461b23d11e877ad14",
                         "installed_by": ["modules"]
                     },
+                    "fcsgx/rungx": {
+                        "branch": "master",
+                        "git_sha": "0f69cb9d85f8d5ae9f7db0850e583c83b9a391d2",
+                        "installed_by": ["modules"]
+                    },
                     "genescopefk": {
                         "branch": "master",
                         "git_sha": "0110646d0f733d87d8996260cf87d91b7ea2651c",
@@ -78,6 +83,11 @@
                     "spades": {
                         "branch": "master",
                         "git_sha": "eeeb609bd37db7d81d7f6cb7d23a73c08ac4d752",
+                        "installed_by": ["modules"]
+                    },
+                    "tiara/tiara": {
+                        "branch": "master",
+                        "git_sha": "240b2ee57d7cefbb276315d178285398bdb34c2f",
                         "installed_by": ["modules"]
                     }
                 }

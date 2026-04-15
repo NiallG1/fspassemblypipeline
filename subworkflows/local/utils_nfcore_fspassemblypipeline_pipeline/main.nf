@@ -101,7 +101,7 @@ workflow PIPELINE_INITIALISATION {
         .map {
             meta, file_1, file_2, fasta ->
                 if ( meta.type == 'bam') {
-                    return [ meta, [ fasta, file_1 ] ]
+                    return [ meta.id, meta, [ fasta, file_1 ] ]
                 } else if (!file_2) {
                     return [ meta.id, meta + [ single_end:true ], [ file_1 ] ]
                 } else {
