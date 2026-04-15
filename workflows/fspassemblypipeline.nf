@@ -41,13 +41,11 @@ workflow FSPASSEMBLYPIPELINE {
     PREPROCESSING (
         ch_samplesheet.raw
     )
-    ch_versions = ch_versions.mix( PREPROCESSING.out.versions )
 
 
     GENOME_ASSEMBLY (
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
-    ch_versions = ch_versions.mix( GENOME_ASSEMBLY.out.versions )
 
 
     CONTAMINATION_DETECTION(
@@ -90,45 +88,55 @@ workflow FSPASSEMBLYPIPELINE {
     //
     // MODULE: MultiQC
     //
-    ch_multiqc_config        = channel.fromPath(
-        "$projectDir/assets/multiqc_config.yml", checkIfExists: true)
-    ch_multiqc_custom_config = params.multiqc_config ?
-        channel.fromPath(params.multiqc_config, checkIfExists: true) :
-        channel.empty()
-    ch_multiqc_logo          = params.multiqc_logo ?
-        channel.fromPath(params.multiqc_logo, checkIfExists: true) :
-        channel.empty()
+    def mqc_config        = file("$projectDir/assets/multiqc_config.yml", checkIfExists: true)
+    def mqc_custom_config = params.multiqc_config ? file(params.multiqc_config, checkIfExists: true) : []
+    def mqc_logo          = params.multiqc_logo ? file(params.multiqc_logo, checkIfExists: true) : []
 
     summary_params      = paramsSummaryMap(
         workflow, parameters_schema: "nextflow_schema.json")
     ch_workflow_summary = channel.value(paramsSummaryMultiqc(summary_params))
-    ch_multiqc_files = ch_multiqc_files.mix(
-        ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
+        .collectFile(name: 'workflow_summary_mqc.yaml')
+
     ch_multiqc_custom_methods_description = params.multiqc_methods_description ?
         file(params.multiqc_methods_description, checkIfExists: true) :
         file("$projectDir/assets/methods_description_template.yml", checkIfExists: true)
-    ch_methods_description                = channel.value(
+    ch_methods_description = channel.value(
         methodsDescriptionText(ch_multiqc_custom_methods_description))
+        .collectFile(name: 'methods_description_mqc.yaml')
 
-    ch_multiqc_files = ch_multiqc_files.mix(ch_collated_versions)
-    ch_multiqc_files = ch_multiqc_files.mix(
-        ch_methods_description.collectFile(
-            name: 'methods_description_mqc.yaml',
-            sort: true
-        )
-    )
+    // Add global context files (summary, versions, methods) with empty meta
+    ch_multiqc_files = ch_multiqc_files
+        .mix(ch_workflow_summary.map   { file -> [[:], file] })
+        .mix(ch_collated_versions.map  { file -> [[:], file] })
+        .mix(ch_methods_description.map{ file -> [[:], file] })
 
-    MULTIQC (
-        ch_multiqc_files.collect(),
-        ch_multiqc_config.toList(),
-        ch_multiqc_custom_config.toList(),
-        ch_multiqc_logo.toList(),
-        [],
-        []
-    )
+    // Build the MultiQC config list (default + optional custom)
+    def mqc_config_files = mqc_custom_config ? [mqc_config, mqc_custom_config] : [mqc_config]
 
-    emit:multiqc_report = MULTIQC.out.report.toList() // channel: /path/to/multiqc_report.html
-    versions       = ch_versions                 // channel: [ path(versions.yml) ]
+    // Normal merged MultiQC: collect all files into one report
+    ch_all_mqc_files = ch_multiqc_files
+        .map { _meta, file -> file }
+        .collect()
+
+    ch_multiqc_input = ch_all_mqc_files
+        .map { files ->
+            [
+                [id: 'multiqc_report'],
+                files,
+                mqc_config_files,
+                mqc_logo,
+                [],  // replace_names
+                []   // sample_names
+            ]
+        }
+
+    MULTIQC(ch_multiqc_input)
+
+    emit:
+    multiqc_report = MULTIQC.out.report.map { meta, report -> report }
+    versions       = ch_versions
+
+
 
 }
 
