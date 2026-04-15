@@ -12,8 +12,8 @@ workflow CONTAMINATION_DETECTION {
     //ch_db_path          // value: database path
    
     main:
-
-    ch_tiara = ch_samplesheet.bam
+    ch_samplesheet.view()
+    ch_tiara = ch_samplesheet
         .map { meta, files -> 
             tuple(
                 [id: meta.id],      // Create new meta with just id
@@ -21,7 +21,7 @@ workflow CONTAMINATION_DETECTION {
             )
         }
 
-    ch_fcsgx = ch_samplesheet.bam
+    ch_fcsgx = ch_samplesheet
         .map { meta, files -> 
             tuple(
                 [id: meta.id],      // Create new meta with just id

@@ -1,0 +1,3 @@
+##[["FCS genome report", 2, 1], {"git-rev": "v0.5.5-9-gfc836c1", "run-date": "Wed Apr 15 13:32:26 2026", "db": {"build-date": "2022-11-03", "seqs": 3042, "Gbp": 0.28336}, "run-info": {"agg-cvg": 0.00994446, "asserted-div": "fung:basidiomycetes", "inferred-primary-divs": ["prok:CFB group bacteria"], "corrected-primary-divs": ["fung:basidiomycetes"], "genome-hash": "113bd65a9942043d"}}]
+#seq_id	start_pos	end_pos	seq_len	action	div	agg_cont_cov	top_tax_name
+NODE_29_length_439_cov_0.814917	1	439	439	EXCLUDE	prok:CFB group bacteria	94	Bacteroides stercorirosoris

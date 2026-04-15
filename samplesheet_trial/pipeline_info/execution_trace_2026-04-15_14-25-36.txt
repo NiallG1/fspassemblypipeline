@@ -1,0 +1,2 @@
+task_id	hash	native_id	name	status	exit	submit	duration	realtime	%cpu	peak_rss	peak_vmem	rchar	wchar
+1	16/af245b	-	NFCORE_FSPASSEMBLYPIPELINE:FSPASSEMBLYPIPELINE:CONTAMINATION_DETECTION:TIARA_TIARA (EGP017_25_B2_336)	FAILED	-	-	-	-	-	-	-	-	-
