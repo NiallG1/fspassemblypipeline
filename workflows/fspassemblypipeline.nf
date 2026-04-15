@@ -56,10 +56,11 @@ workflow FSPASSEMBLYPIPELINE {
     //ch_versions = ch_versions.mix( CONTAMINATION_DETECTION.out.versions )
 
 
-    CONTAMINATION_DETECTION (ch_samplesheet.bam)
-    
-    ch_versions = ch_versions.mix( CONTAMINATION_DETECTION.out.versions )
-
+    CONTAMINATION_DETECTION(
+    ch_samplesheet.bam      // Channel: [meta, fasta, bam]
+    //params.ramdisk_path,     // null
+    //params.db_path           // '/home/nga10kg/FSP/pipeline/gx_test_db/test-only'
+    )
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
 

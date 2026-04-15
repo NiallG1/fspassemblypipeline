@@ -6,22 +6,45 @@ include { COMPARISON         } from '../../../modules/local/comparison/main'
 workflow CONTAMINATION_DETECTION {
 
     take:
-    ch_assemblies       // channel: [val(meta), path(assembly)] - genome assemblies (FASTA or BAM files)
-    ch_ramdisk_path     // value: ramdisk path or empty list
-    ch_db_path          // value: database path
+    ch_samplesheet
+    //ch_assemblies       // channel: [val(meta), path(assembly)] - genome assemblies (FASTA or BAM files)
+    //ch_ramdisk_path     // value: ramdisk path or empty list
+    //ch_db_path          // value: database path
    
     main:
+
+    ch_tiara = ch_samplesheet.bam
+        .map { meta, files -> 
+            tuple(
+                [id: meta.id],      // Create new meta with just id
+                files[0]            // First file in the list is the fasta
+            )
+        }
+
+    ch_fcsgx = ch_samplesheet.bam
+        .map { meta, files -> 
+            tuple(
+                [id: meta.id],      // Create new meta with just id
+                meta.taxid,         // Extract taxid from meta
+                files[0]            // First file in the list is the fasta
+            )
+        }
+
+
+
+   
     // Run Tiara classification
-    TIARA_TIARA(ch_assemblies)
+    TIARA_TIARA(ch_tiara)
 
     // Prepare input for FCS-GX: use per-sample taxon_id from metadata, fall back to global params.taxid
-    ch_fcs_gx = ch_assemblies.map { meta, assembly -> 
-        def taxid = meta.taxon_id ?: params.taxid
-        [meta, taxid, assembly]
-    }
+   
+    //ch_fcs_gx = ch_samplesheet.map { meta, assembly -> 
+    //    def taxid = meta.taxon_id ?: params.taxid
+    //    [meta, taxid, assembly]
+    
 
     // Run FCS-GX contamination screening
-    FCSGX_RUNGX(ch_fcs_gx, ch_db_path, ch_ramdisk_path)
+    FCSGX_RUNGX(ch_fcsgx, params.db_path, params.ramdisk_path ?:[])
 
     // Convert FCS-GX report format
     CONVERTFCSRPT(FCSGX_RUNGX.out.taxonomy_report)
@@ -37,5 +60,5 @@ workflow CONTAMINATION_DETECTION {
     taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report   
     fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted  
     
-    versions = TIARA_TIARA.out.versions.mix(FCSGX_RUNGX.out.versions) 
+   // versions = TIARA_TIARA.out.versions.mix(FCSGX_RUNGX.out.versions) 
 }
