@@ -78,7 +78,7 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang.
+nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 
