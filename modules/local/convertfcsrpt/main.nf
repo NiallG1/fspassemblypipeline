@@ -10,8 +10,7 @@ process CONVERTFCSRPT {
 
     output:
     tuple val(meta), path("*.tsv"), emit: fcs_report_reformatted
-
-    path "versions.yml", emit: versions
+    tuple val("${task.process}"), val('convertfcsrpt'), eval("cut --version | head -n1 | sed 's/cut (GNU coreutils) //'"), topic: versions, emit: versions_convertfcsrpt
 
     when:
     task.ext.when == null || task.ext.when
@@ -25,11 +24,6 @@ process CONVERTFCSRPT {
         | tail -n +2 \\
         | sed '1s/^#//' \\
         > ${prefix}.tsv
-    
-    cat <<-END_VERSIONS > versions.yml
-    "${task.process}":
-        coreutils: \$(cut --version | head -n1 | sed 's/cut (GNU coreutils) //')
-    END_VERSIONS
     """
 
 }

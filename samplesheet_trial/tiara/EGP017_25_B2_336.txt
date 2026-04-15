@@ -1,2 +1,0 @@
-sequence_id	class_fst_stage	class_snd_stage
-NODE_1_length_4886_cov_0.859846	eukarya	n/a
