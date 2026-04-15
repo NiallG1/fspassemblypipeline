@@ -55,6 +55,4 @@ workflow CONTAMINATION_DETECTION {
     tiara_classifications  = TIARA_TIARA.out.classifications
     taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report
     fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted
-
-   // versions = TIARA_TIARA.out.versions.mix(FCSGX_RUNGX.out.versions)
 }
