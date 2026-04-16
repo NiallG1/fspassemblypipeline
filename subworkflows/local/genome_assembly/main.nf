@@ -92,9 +92,7 @@ workflow GENOME_ASSEMBLY {
     def busco_lineages_file = file(params.lineages_list_file)
 
     def busco_lineages = busco_lineages_file
-        .readLines()
-        .collect { v -> v.trim() }
-        .findAll { v -> v && !v.startsWith('#') } as Set
+        .readLines() as Set
 
     def ext = "_${params.busco_db_extension}"
     def fallback = params.busco_lineage

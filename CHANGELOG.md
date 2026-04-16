@@ -40,6 +40,7 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 26/03/2026 - Added dedicated `FALCO_AFTER_MERGE` preprocessing invocation and per-sample Falco publish layout under `falco/<sample>/{raw,trimmed,merge}`.
 - 27/03/2026 - Brought back missing `MULTIQC` module include in `workflows/fspassemblypipeline.nf` as it causes error I don't want to fix.
 - 02/04/2026 - Synced changelog entries from `Wu_fspassemblypipeline` and documented 02/04 debugging updates in this repository changelog.
+- 16/04/2026 - Implemented selection of busco lineage per sample
 
 ### `Fixed`
 
