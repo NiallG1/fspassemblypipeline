@@ -1,9 +1,3 @@
-// TODO nf-core: If in doubt look at other nf-core/subworkflows to see how we are doing things! :)
-//               https://github.com/nf-core/modules/tree/master/subworkflows
-//               You can also ask for help via your pull request or on the #subworkflows channel on the nf-core Slack workspace:
-//               https://nf-co.re/join
-// TODO nf-core: A subworkflow SHOULD import at least two modules
-
 include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
 include { KMERGENIE                            } from '../../../modules/nf-core/kmergenie/main'
@@ -23,11 +17,10 @@ include { QUAST                                } from '../../../modules/nf-core/
 workflow GENOME_ASSEMBLY {
 
     take:
-    // TODO nf-core: edit input (take) channels
+
     ch_fastp_reads // channel: [ val(meta), path(reads) ]
 
     main:
-    // TODO nf-core: substitute modules here for the modules of your subworkflow
 
     SEQKIT_STATS ( ch_fastp_reads )
 //    SEQKIT_STATS_MERGED
@@ -46,23 +39,19 @@ workflow GENOME_ASSEMBLY {
     [],
     []
     )
-    ch_versions = SPADES.out.versions
 
     // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
     ch_input_reads_megahit = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
 
     MEGAHIT      ( ch_input_reads_megahit )
-    ch_versions = ch_versions.mix(MEGAHIT.out.versions)
 
     MINIA        ( ch_fastp_reads )
-    ch_versions = ch_versions.mix(MINIA.out.versions)
 
     ch_abyss_input = ch_fastp_reads.map { meta, reads -> [ meta, reads, [] ] }
     ABYSS_ABYSSPE ( ch_abyss_input, params.abyss_kmer )
-//    ch_versions = ch_versions.mix(ABYSS_ABYSSPE.out.versions)    // this uses topic versions, need to update the other modules for this to work
+
     SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
-//    ch_versions = ch_versions.mix(SPARSEASSEMBLER.out.versions)   // this uses topic versions, the other modules should be updated.
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
     def ch_draft_assemblies_input = SPADES.out.scaffolds.map { meta, scaffolds ->
@@ -134,5 +123,4 @@ workflow GENOME_ASSEMBLY {
     busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
     merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
     quast_results                = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
-    versions                     = ch_versions
 }
