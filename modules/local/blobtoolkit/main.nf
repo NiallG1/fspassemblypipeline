@@ -11,10 +11,11 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
         'biocontainers/YOUR-TOOL-HERE' }"
 
     input:
-    tuple val(meta) , path(fasta)
-    tuple val(meta1), path(busco, stageAs: 'lineage??/*')
-    tuple val(meta3), path(yaml)
-    path(taxdump, stageAs: 'taxdump/taxdump.json')
+    tuple val(meta) , path(fasta) //add fasta
+    tuple val(meta), path(bam)  // add bam file
+    tuple val(meta1), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
+    tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
+    path(taxdump, stageAs: 'taxdump/taxdump.json') //may not need this 
 
     output:
     tuple val(meta), path(prefix), emit: blobdir
