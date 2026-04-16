@@ -328,7 +328,8 @@
             "default": "fungi_odb12"
         },
         "busco_lineages_path": {
-            "type": "string"
+            "type": "string",
+            "default": "/home/lobinu/git_repos/fspassemblypipeline/data"
         },
         "busco_config_file": {
             "type": "string"
@@ -337,15 +338,12 @@
             "type": "boolean"
         },
         "busco_extra_args": {
-            "type": "string"
+            "type": "string",
+            "default": "--offline"
         },
         "quast_extra_args": {
             "type": "string",
             "default": "--min-contig 250"
-        },
-        "busco_lineage_specific": {
-            "type": "string",
-            "default": "basidiomycota_odb12"
         },
         "abyss_kmer": {
             "type": "integer",
@@ -388,6 +386,14 @@
         },
         "ramdisk_path": {
             "type": "string"
+        },
+        "busco_db_extension": {
+            "type": "string",
+            "default": "odb12"
+        },
+        "lineages_list_file": {
+            "type": "string",
+            "default": "data/fungi_busco_lineages.txt"
         }
     }
 }

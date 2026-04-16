@@ -10,7 +10,7 @@ lint:
 nf_core_version: 3.5.2
 repository_type: pipeline
 template:
-  author: Lia Obinu, Niall Garvey, Wu Huang
+  author: Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos
   description: Genome assembly pipeline for the Fungarium Sequencing Project, designed
     to process and assemble genomic data from fungal species, enabling high-quality
     reference genomes for research and biodiversity studies.
