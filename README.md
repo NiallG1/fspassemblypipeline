@@ -83,10 +83,10 @@ This speeds up the pipeline as it will not have to download busco lineages on th
 We also need to provide the path to where busco lineages are downloaded in `nextflow.config`:
 
 ```
-    busco_lineages_path        = '/path/to/lineages/parent/directory'
+    busco_lineages_path        = 'path/to/lineages/parent/directory'
 ```
 
-Note that BUSCO automatically downloads lineages in a directory called `lineages`. In `nextflow.config` we need to provide the path to the parent directory of `lineages`. This needs to be the full absolute path.
+Note that BUSCO automatically downloads lineages in a directory called `lineages`. In `nextflow.config` we need to provide the path to the parent directory of `lineages`.
 
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
      Explain what rows and columns represent. For instance (please edit as appropriate):
