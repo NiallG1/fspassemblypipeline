@@ -11,7 +11,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
         'biocontainers/YOUR-TOOL-HERE' }"
 
     input:
-    tuple val(meta) , path(fasta) //add fasta
+    tuple val(meta), path(fasta) //add fasta
     tuple val(meta), path(bam)  // add bam file
     tuple val(meta1), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
     tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
