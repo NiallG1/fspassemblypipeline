@@ -60,7 +60,7 @@ gawk '/fungi_odb12/{flag=1; indent=length($0)-length(ltrim($0)); print "fungi_od
      function ltrim(s) { sub(/^[ \t\r\n]+/, "", s); return s }' busco_lineages.txt > fungi_busco_lineages.txt
 ```
 
-In the example above we are extracting the names of all the BUSCO lineages that belong to the fungi kingdom. The target group can be different and its taxonomic level doesn't matter. The user can for example target `eukaryota` or something more specific like `boletales` using the same code. Note that `odb12` extension refers to a specific version of BUSCO lineages, and it can be changed when newer versions will be available.
+In the example above we are extracting the names of all the BUSCO lineages that belong to the fungi kingdom. The target group can be different and its taxonomic level doesn't matter. The user can for example target `eukaryota` or something more specific like `basidiomycota` using the same code. Note that `odb12` extension refers to a specific version of BUSCO lineages, and it can be changed when newer versions will be available.
 
 `fungi_busco_lineages.txt` and the extension must to be provided through the `nextflow.config`:
 
