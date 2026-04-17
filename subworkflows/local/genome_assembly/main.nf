@@ -1,9 +1,10 @@
 include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
 include { KMERGENIE                            } from '../../../modules/nf-core/kmergenie/main'
-include { GETKMERGENIEK                         } from '../../../modules/local/getkmergeniek/main'
+include { GETKMERGENIEK                        } from '../../../modules/local/getkmergeniek/main'
 include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
-include { SPADES                               } from '../../../modules/nf-core/spades/main'
+include { SPADES as SPADES_MANUAL              } from '../../../modules/nf-core/spades/main'
+include { SPADES as SPADES_KMERGENIE           } from '../../../modules/nf-core/spades/main'
 include { MEGAHIT                              } from '../../../modules/nf-core/megahit/main'
 include { MINIA                                } from '../../../modules/nf-core/minia/main'
 include { ABYSS_ABYSSPE                        } from '../../../modules/nf-core/abyss/abysspe/main'
@@ -25,16 +26,82 @@ workflow GENOME_ASSEMBLY {
 //    SEQKIT_STATS_MERGED
     FASTK_FASTK  ( ch_fastp_reads )
 
-    ch_input_reads_kmergenie = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
     KMERGENIE    ( ch_fastp_reads )
 
     GETKMERGENIEK ( KMERGENIE.out.html )
 
+    // Channel 1: Manual strategy (uses config values)
+    ch_reads_manual_strategy = ch_fastp_reads
+        .map { meta, reads ->
+            [meta + [kmer_strategy: 'manual'], reads]
+        }
+
+    // // Channel 2: KmerGenie strategy (uses predicted kmer) --> this should be probably fine for single kmer assemblers.
+    // ch_reads_kmergenie_strategy = ch_fastp_reads
+    //     .map { meta, reads -> [meta.id, meta, reads] }
+    //     .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file -> 
+    //         [meta.id, kmer_file.text.trim() as Integer]
+    //     })
+    //     .map { id, meta, reads, kmer ->
+    //         [meta + [kmer_strategy: 'kmergenie', predicted_kmer: kmer], reads]
+    //     }
+
+    // Channel 2: KmerGenie strategy (adds predicted kmer to default list)
+    ch_reads_kmergenie_strategy = ch_fastp_reads
+        .map { meta, reads -> [meta.id, meta, reads] }
+        .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file -> 
+            [meta.id, kmer_file.text.trim() as Integer]
+        })
+        .map { id, meta, reads, predicted_kmer ->
+            // Build k-mer list: add predicted kmer to defaults if valid
+            def default_kmers = params.spades_default_kmers.collect { it as Integer }
+            def max_kmer = 127  // Hard-coded SPAdes limitation
+            
+            // Validate predicted kmer: must be odd, in range [15, max_kmer], and not already in list
+            def is_valid = (predicted_kmer >= 15 && 
+                            predicted_kmer <= max_kmer && 
+                            predicted_kmer % 2 == 1 &&
+                            !(predicted_kmer in default_kmers))
+            
+            def kmer_list = is_valid ? 
+                (default_kmers + [predicted_kmer]).sort() : 
+                default_kmers
+            
+            // Convert list to comma-separated string for SPAdes
+            def kmer_string = kmer_list.join(',')
+            
+            def enriched_meta = meta + [
+                kmer_strategy: 'kmergenie',
+                predicted_kmer: predicted_kmer,
+                kmer_list: kmer_string,
+                kmer_added: is_valid
+            ]
+            
+            log.info """
+            Sample: ${id}
+            Predicted kmer: ${predicted_kmer}
+            Max kmer: ${max_kmer}
+            Check >= 15: ${predicted_kmer >= 15}
+            Check <= max_kmer: ${predicted_kmer <= max_kmer}
+            Check odd: ${predicted_kmer % 2 == 1}
+            Check not in list: ${!(predicted_kmer in default_kmers)}
+            Valid: ${is_valid}
+            Final kmer list: ${kmer_string}
+            """.stripIndent()
+    
+            [enriched_meta, reads]
+        }
+
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
-    ch_input_reads_spades = ch_fastp_reads.map { meta, reads -> [ meta, reads, [], [] ] }
+    // ch_input_reads_spades = ch_fastp_reads.map { meta, reads -> [ meta, reads, [], [] ] }
 
-    SPADES       ( ch_input_reads_spades,
+    SPADES_MANUAL       ( ch_reads_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
+    [],
+    []
+    )
+
+    SPADES_KMERGENIE       ( ch_reads_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
     [],
     []
     )
@@ -53,11 +120,17 @@ workflow GENOME_ASSEMBLY {
     SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
-    def ch_draft_assemblies_input = SPADES.out.scaffolds.map { meta, scaffolds ->
-        // add assembler name to meta.id to ensure unique output names
-        def assembler = 'spades'
-        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'spades', id: meta.id]
-        return [ new_meta, scaffolds, "${meta.id}_${assembler}.fa" ]
+    def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
+        .mix(SPADES_KMERGENIE.out.scaffolds)
+        .map { meta, scaffolds ->
+            def assembler = 'spades'
+            def strategy = meta.kmer_strategy
+            def new_meta = meta + [
+                assembly_id: "${meta.id}_${assembler}_${strategy}",
+                assembler: assembler,
+                id: meta.id
+            ]
+            [new_meta, scaffolds, "${meta.id}_${assembler}_${strategy}.fa"]
     }
     .mix( MEGAHIT.out.contigs.map { meta, contigs ->
         def assembler = 'megahit'
@@ -158,9 +231,12 @@ workflow GENOME_ASSEMBLY {
 
     emit:
     seqkit_stats                       = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
+    kmergenie_html                     = KMERGENIE.out.html             // channel: [ val(meta), path('*.html') ]
+    getkmergeniek_k                    = GETKMERGENIEK.out.kmer_txt              // channel: [ val(meta), path('*.k') ]
     fastk_ktab                         = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
     fastk_hist                         = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds                   = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    spades_scaffolds_manual            = SPADES_MANUAL.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    spades_scaffolds_kmergenie         = SPADES_KMERGENIE.out.scaffolds          // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
     megahit_contigs                    = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
     minia_contigs                      = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
     abyss_scaffolds                    = ABYSS_ABYSSPE.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
