@@ -88,6 +88,10 @@ workflow GENOME_ASSEMBLY {
     BUSCO_BUSCO ( RENAME_ASSEMBLIES.out.renamed_assemblies, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
 
     // Map samples to their best BUSCO database based on taxonomy
+    // BUSCO_SPECIFIC runs BUSCO with a specific lineage for each sample. The lineage is determined based on the sample metadata and the list of available lineages.
+    // we attempt to find the most specific available BUSCO database for each sample by walking down the taxonomic hierarchy (family → order → class → phylum).
+    // If no matching database is found at any level, we fall back to the lineage specified by params.busco_lineage.
+
     // Load BUSCO lineages once
     def busco_lineages_file = file(params.lineages_list_file)
 
