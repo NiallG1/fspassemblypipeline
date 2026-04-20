@@ -5,10 +5,14 @@ include { GETKMERGENIEK                        } from '../../../modules/local/ge
 include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES as SPADES_MANUAL              } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_KMERGENIE           } from '../../../modules/nf-core/spades/main'
-include { MEGAHIT                              } from '../../../modules/nf-core/megahit/main'
-include { MINIA                                } from '../../../modules/nf-core/minia/main'
-include { ABYSS_ABYSSPE                        } from '../../../modules/nf-core/abyss/abysspe/main'
-include { SPARSEASSEMBLER                      } from '../../../modules/local/sparseassembler/main'
+include { MEGAHIT as MEGAHIT_MANUAL            } from '../../../modules/nf-core/megahit/main'
+include { MEGAHIT as MEGAHIT_KMERGENIE         } from '../../../modules/nf-core/megahit/main'
+include { MINIA as MINIA_MANUAL                } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_KMERGENIE             } from '../../../modules/nf-core/minia/main'
+include { ABYSS_ABYSSPE as ABYSS_MANUAL } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_KMERGENIE } from '../../../modules/nf-core/abyss/abysspe/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE } from '../../../modules/local/sparseassembler/main'
 include { RENAME_ASSEMBLIES                    } from '../../../modules/local/rename_assemblies/main'
 include { BUSCO_BUSCO                          } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC        } from '../../../modules/nf-core/busco/busco/main'
@@ -36,59 +40,63 @@ workflow GENOME_ASSEMBLY {
             [meta + [kmer_strategy: 'manual'], reads]
         }
 
-    // // Channel 2: KmerGenie strategy (uses predicted kmer) --> this should be probably fine for single kmer assemblers.
-    // ch_reads_kmergenie_strategy = ch_fastp_reads
-    //     .map { meta, reads -> [meta.id, meta, reads] }
-    //     .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file -> 
-    //         [meta.id, kmer_file.text.trim() as Integer]
-    //     })
-    //     .map { id, meta, reads, kmer ->
-    //         [meta + [kmer_strategy: 'kmergenie', predicted_kmer: kmer], reads]
-    //     }
-
     // Channel 2: KmerGenie strategy (adds predicted kmer to default list)
     ch_reads_kmergenie_strategy = ch_fastp_reads
         .map { meta, reads -> [meta.id, meta, reads] }
-        .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file -> 
+        .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file ->
             [meta.id, kmer_file.text.trim() as Integer]
         })
-        .map { id, meta, reads, predicted_kmer ->
+        .map { id, meta, reads, kmergenie_kmer ->
             // Build k-mer list: add predicted kmer to defaults if valid
-            def default_kmers = params.spades_default_kmers.collect { it as Integer }
-            def max_kmer = 127  // Hard-coded SPAdes limitation
-            
-            // Validate predicted kmer: must be odd, in range [15, max_kmer], and not already in list
-            def is_valid = (predicted_kmer >= 15 && 
-                            predicted_kmer <= max_kmer && 
-                            predicted_kmer % 2 == 1 &&
-                            !(predicted_kmer in default_kmers))
-            
-            def kmer_list = is_valid ? 
-                (default_kmers + [predicted_kmer]).sort() : 
-                default_kmers
-            
-            // Convert list to comma-separated string for SPAdes
-            def kmer_string = kmer_list.join(',')
-            
+            def default_kmers_spades = [21, 33, 55, 77]  // spades recommended defaults
+            def max_kmer_spades = 127  // spades max kmer limit
+
+            def default_kmers_megahit = [21, 29, 39, 59, 79, 99, 119, 141] // megahit recommended defaults
+            def max_kmer_megahit = 141 // megahit max kmer limit
+            def max_step_megahit = 28  // Maximum allowed gap between consecutive kmers in megahit
+
+            // Validate predicted kmer for spades: must be odd, in range [15, 127], and not already in list
+            def is_valid_spades = (kmergenie_kmer >= 15 &&
+                            kmergenie_kmer <= max_kmer_spades &&
+                            kmergenie_kmer % 2 == 1 &&
+                            !(kmergenie_kmer in default_kmers_spades))
+
+            // Validate predicted kmer for megahit: must be odd, in range [15, 141], and not already in list
+            def is_valid_megahit = (kmergenie_kmer >= 15 &&
+                            kmergenie_kmer <= max_kmer_megahit &&
+                            kmergenie_kmer % 2 == 1 &&
+                            !(kmergenie_kmer in default_kmers_megahit))
+
+            // Build final k-mer lists for spades
+            def kmer_list_spades = is_valid_spades ?
+                (default_kmers_spades + [kmergenie_kmer]).sort() :
+                default_kmers_spades
+
+            // Build final k-mer lists for megahit
+            def kmer_list_megahit = is_valid_megahit ?
+                (default_kmers_megahit + [kmergenie_kmer]).sort() :
+                default_kmers_megahit
+
+            // For assemblers that only take a single k-mer, use the predicted k-mer if it's valid (between 15 and 127), or fall back to a fixed value (25)
+            def single_kmer = (kmergenie_kmer >= 15 && kmergenie_kmer <= 127 && kmergenie_kmer % 2 == 1) ? kmergenie_kmer : 25
+
+            // Enrich metadata with k-mer strategy and lists
             def enriched_meta = meta + [
                 kmer_strategy: 'kmergenie',
-                predicted_kmer: predicted_kmer,
-                kmer_list: kmer_string,
-                kmer_added: is_valid
+                predicted_kmer: kmergenie_kmer,
+                kmer_list_spades: kmer_list_spades.join(','),
+                kmer_list_megahit: kmer_list_megahit.join(','),
+                single_kmer: single_kmer
             ]
-            
+
             log.info """
             Sample: ${id}
-            Predicted kmer: ${predicted_kmer}
-            Max kmer: ${max_kmer}
-            Check >= 15: ${predicted_kmer >= 15}
-            Check <= max_kmer: ${predicted_kmer <= max_kmer}
-            Check odd: ${predicted_kmer % 2 == 1}
-            Check not in list: ${!(predicted_kmer in default_kmers)}
-            Valid: ${is_valid}
-            Final kmer list: ${kmer_string}
+            Predicted kmer: ${kmergenie_kmer}
+            SPAdes - Valid: ${is_valid_spades}, List: ${kmer_list_spades.join(',')}
+            MEGAHIT - Valid: ${is_valid_megahit}, List: ${kmer_list_megahit.join(',')}
+            Single k-mer: ${single_kmer}
             """.stripIndent()
-    
+
             [enriched_meta, reads]
         }
 
@@ -108,53 +116,94 @@ workflow GENOME_ASSEMBLY {
 
     // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
-    ch_input_reads_megahit = ch_fastp_reads.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    ch_input_reads_megahit_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    MEGAHIT_MANUAL      ( ch_input_reads_megahit_manual )
 
-    MEGAHIT      ( ch_input_reads_megahit )
+    ch_input_reads_megahit_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    MEGAHIT_KMERGENIE ( ch_input_reads_megahit_kmergenie )
 
-    MINIA        ( ch_fastp_reads )
+    MINIA_MANUAL        ( ch_reads_manual_strategy )
+    MINIA_KMERGENIE     ( ch_reads_kmergenie_strategy )
 
-    ch_abyss_input = ch_fastp_reads.map { meta, reads -> [ meta, reads, [] ] }
-    ABYSS_ABYSSPE ( ch_abyss_input, params.abyss_kmer )
+    ch_abyss_input_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
+    ABYSS_MANUAL ( ch_abyss_input_manual, params.abyss_kmer )
 
-    SPARSEASSEMBLER ( ch_fastp_reads, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
+    // create an input channel with just the kmer value for abyss and sparseassembler, as they require it as input (can't be passed from the extra args)
+    ch_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
+
+    ch_abyss_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads, [] ] }
+    ABYSS_KMERGENIE ( ch_abyss_input_kmergenie, ch_kmergenie_single_kmer )
+
+    SPARSEASSEMBLER_MANUAL ( ch_reads_manual_strategy, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
+    SPARSEASSEMBLER_KMERGENIE ( ch_reads_kmergenie_strategy, ch_kmergenie_single_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
+    // def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
+    //     .mix(SPADES_KMERGENIE.out.scaffolds)
+    //     .map { meta, scaffolds ->
+    //         def assembler = 'spades'
+    //         def strategy = meta.kmer_strategy
+    //         def new_meta = meta + [
+    //             assembly_id: "${meta.id}_${assembler}_${strategy}",
+    //             assembler: assembler,
+    //             id: meta.id
+    //         ]
+    //         [new_meta, scaffolds, "${meta.id}_${assembler}_${strategy}.fa"]
+    // }
+    // .mix( MEGAHIT_MANUAL.out.contigs.map { meta, contigs ->
+    //     def assembler = 'megahit'
+    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'megahit', id: meta.id]
+    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
+    // } )
+    // .mix( MINIA_MANUAL.out.contigs.map { meta, contigs ->
+    //     def assembler = 'minia'
+    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'minia', id: meta.id]
+    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
+    // } )
+    // .mix( ABYSS_ABYSSPE_MANUAL.out.contigs.map { meta, contigs ->
+    //     def assembler = 'abyss'
+    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'abyss', id: meta.id]
+    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
+    // } )
+    // .mix( SPARSEASSEMBLER_MANUAL.out.scaffolds
+    // .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
+    // .unique { meta, assembly -> meta.id }
+    // .map { meta, assembly ->
+    //     def assembler = 'sparseassembler'
+    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'sparseassembler', id: meta.id]
+    //     return [ new_meta, assembly, "${meta.id}_${assembler}.fa" ]
+    // } )
+
+    // simplify channel for renaming assemblies
+    def createAssemblyMeta = { meta, assembly, assembler ->
+        def strategy = meta.kmer_strategy
+        def new_meta = meta + [
+            assembly_id: "${meta.id}_${assembler}_${strategy}",
+            assembler: assembler,
+            id: meta.id
+        ]
+        return [new_meta, assembly, "${meta.id}_${assembler}_${strategy}.fa"]
+    }
+
     def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
         .mix(SPADES_KMERGENIE.out.scaffolds)
-        .map { meta, scaffolds ->
-            def assembler = 'spades'
-            def strategy = meta.kmer_strategy
-            def new_meta = meta + [
-                assembly_id: "${meta.id}_${assembler}_${strategy}",
-                assembler: assembler,
-                id: meta.id
-            ]
-            [new_meta, scaffolds, "${meta.id}_${assembler}_${strategy}.fa"]
-    }
-    .mix( MEGAHIT.out.contigs.map { meta, contigs ->
-        def assembler = 'megahit'
-        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'megahit', id: meta.id]
-        return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    } )
-    .mix( MINIA.out.contigs.map { meta, contigs ->
-        def assembler = 'minia'
-        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'minia', id: meta.id]
-        return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    } )
-    .mix( ABYSS_ABYSSPE.out.contigs.map { meta, contigs ->
-        def assembler = 'abyss'
-        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'abyss', id: meta.id]
-        return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    } )
-    .mix( SPARSEASSEMBLER.out.scaffolds
-    .concat(SPARSEASSEMBLER.out.contigs)
-    .unique { meta, assembly -> meta.id }
-    .map { meta, assembly ->
-        def assembler = 'sparseassembler'
-        def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'sparseassembler', id: meta.id]
-        return [ new_meta, assembly, "${meta.id}_${assembler}.fa" ]
-    } )
+        .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
+        .mix( MEGAHIT_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') } )
+        .mix( MEGAHIT_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') } )
+        .mix( MINIA_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') } )
+        .mix( MINIA_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') } )
+        .mix( ABYSS_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'abyss') } )
+        .mix( ABYSS_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'abyss') } )
+        .mix( SPARSEASSEMBLER_MANUAL.out.scaffolds
+            .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
+            .unique { meta, assembly -> meta.id }
+            .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+        )
+        .mix( SPARSEASSEMBLER_KMERGENIE.out.scaffolds
+            .concat(SPARSEASSEMBLER_KMERGENIE.out.contigs)
+            .unique { meta, assembly -> meta.id }
+            .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+        )
 
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
 
@@ -237,10 +286,16 @@ workflow GENOME_ASSEMBLY {
     fastk_hist                         = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
     spades_scaffolds_manual            = SPADES_MANUAL.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
     spades_scaffolds_kmergenie         = SPADES_KMERGENIE.out.scaffolds          // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    megahit_contigs                    = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    minia_contigs                      = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
-    abyss_scaffolds                    = ABYSS_ABYSSPE.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    sparseassembler_scaffolds          = SPARSEASSEMBLER.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    megahit_contigs_manual             = MEGAHIT_MANUAL.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    megahit_contigs_kmergenie          = MEGAHIT_KMERGENIE.out.contigs           // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    minia_contigs_manual               = MINIA_MANUAL.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    minia_contigs_kmergenie            = MINIA_KMERGENIE.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    abyss_scaffolds_manual             = ABYSS_MANUAL.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    abyss_scaffolds_kmergenie          = ABYSS_KMERGENIE.out.scaffolds   // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_scaffolds_manual          = SPARSEASSEMBLER_MANUAL.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_contigs_manual            = SPARSEASSEMBLER_MANUAL.out.contigs      // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    sparseassembler_scaffolds_kmergenie         = SPARSEASSEMBLER_KMERGENIE.out.scaffolds // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_contigs_kmergenie           = SPARSEASSEMBLER_KMERGENIE.out.contigs   // channel: [ val(meta), path('*.contigs.fa.gz') ]
     renamed_assemblies                 = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
     busco_batch_summary                = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
     busco_short_summaries_txt          = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
