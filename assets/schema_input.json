@@ -46,23 +46,23 @@
                 "meta": ["taxid"]
             },
             "family": {
-                "type": "integer",
-                "errorMessage": "Species family, must be in lower case",
+                "type": "string",
+                "errorMessage": "Taxonomic family name",
                 "meta": ["family"]
             },
             "order": {
-                "type": "integer",
-                "errorMessage": "Species order, must be in lower case",
+                "type": "string",
+                "errorMessage": "Taxonomic order name",
                 "meta": ["order"]
             },
             "class": {
-                "type": "integer",
-                "errorMessage": "Species class, must be in lower case",
+                "type": "string",
+                "errorMessage": "Taxonomic class name",
                 "meta": ["class"]
             },
             "phylum": {
-                "type": "integer",
-                "errorMessage": "Species phylum, must be in lower case",
+                "type": "string",
+                "errorMessage": "Taxonomic phylum name",
                 "meta": ["phylum"]
             }
         },

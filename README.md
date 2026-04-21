@@ -38,6 +38,56 @@
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline) with `-profile test` before running the workflow on actual data.
 
+### Required inputs
+
+#### Pre-dowloaded BUSCO lineages
+
+To run BUSCO using a lineage closely related to each of the samples, we need to input a list of available busco lineages, and to download them beforehand. This can be achieved as follows:
+
+```
+cd to/where/you/want/to/store/busco/databases
+
+conda activate busco
+
+busco --list > busco_lineages.txt
+
+gawk '/fungi_odb12/{flag=1; indent=length($0)-length(ltrim($0)); print "fungi_odb12"; next}
+     flag && /- [a-z_]*_odb12/ {
+         current_indent=length($0)-length(ltrim($0))
+         if(current_indent <= indent) flag=0
+         else print gensub(/.*- ([a-z_]*_odb12).*/, "\\1", "g")
+     }
+     function ltrim(s) { sub(/^[ \t\r\n]+/, "", s); return s }' busco_lineages.txt > fungi_busco_lineages.txt
+```
+
+In the example above we are extracting the names of all the BUSCO lineages that belong to the fungi kingdom. The target group can be different and its taxonomic level doesn't matter. The user can for example target `eukaryota` or something more specific like `basidiomycota` using the same code. Note that `odb12` extension refers to a specific version of BUSCO lineages, and it can be changed when newer versions will be available.
+
+`fungi_busco_lineages.txt` and the extension must to be provided through the `nextflow.config`:
+
+```
+    busco_db_extension         = 'odb12'
+    lineages_list_file         = 'path/to/fungi_busco_lineages.txt'
+```
+
+Using the list of lineages of interest we can then easily download all of them in one go:
+
+```
+for i in $(cat fungi_busco_lineages.txt); do
+  echo "downloading $i database"
+  busco --download_path . --download $i
+done
+```
+
+This speeds up the pipeline as it will not have to download busco lineages on the fly, and will avoid connection problems during the run.
+
+We also need to provide the path to where busco lineages are downloaded in `nextflow.config`:
+
+```
+    busco_lineages_path        = 'path/to/lineages/parent/directory'
+```
+
+Note that BUSCO automatically downloads lineages in a directory called `lineages`. In `nextflow.config` we need to provide the path to the parent directory of `lineages`. This needs to be the full absolute path.
+
 <!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
      Explain what rows and columns represent. For instance (please edit as appropriate):
 
@@ -53,6 +103,8 @@ CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
 Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
 
 -->
+
+### Run the pipeline
 
 Now, you can run the pipeline using:
 
@@ -78,7 +130,7 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang.
+nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 

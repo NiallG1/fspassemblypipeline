@@ -337,15 +337,12 @@
             "type": "boolean"
         },
         "busco_extra_args": {
-            "type": "string"
+            "type": "string",
+            "default": "--offline"
         },
         "quast_extra_args": {
             "type": "string",
             "default": "--min-contig 250"
-        },
-        "busco_lineage_specific": {
-            "type": "string",
-            "default": "basidiomycota_odb12"
         },
         "abyss_kmer": {
             "type": "integer",
@@ -387,6 +384,13 @@
             "default": "/home/nga10kg/FSP/pipeline/gx_test_db/test-only"
         },
         "ramdisk_path": {
+            "type": "string"
+        },
+        "busco_db_extension": {
+            "type": "string",
+            "default": "odb12"
+        },
+        "lineages_list_file": {
             "type": "string"
         }
     }

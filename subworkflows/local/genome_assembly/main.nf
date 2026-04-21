@@ -17,7 +17,6 @@ include { QUAST                                } from '../../../modules/nf-core/
 workflow GENOME_ASSEMBLY {
 
     take:
-
     ch_fastp_reads // channel: [ val(meta), path(reads) ]
 
     main:
@@ -87,7 +86,56 @@ workflow GENOME_ASSEMBLY {
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
 
     BUSCO_BUSCO ( RENAME_ASSEMBLIES.out.renamed_assemblies, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
-    BUSCO_SPECIFIC ( RENAME_ASSEMBLIES.out.renamed_assemblies, params.busco_mode, params.busco_lineage_specific, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
+
+    // Map samples to their best BUSCO database based on taxonomy
+    // BUSCO_SPECIFIC runs BUSCO with a specific lineage for each sample. The lineage is determined based on the sample metadata and the list of available lineages.
+    // we attempt to find the most specific available BUSCO database for each sample by walking down the taxonomic hierarchy (family → order → class → phylum).
+    // If no matching database is found at any level, we fall back to the lineage specified by params.busco_lineage.
+
+    // Load BUSCO lineages once
+    def busco_lineages_file = file(params.lineages_list_file)
+
+    def busco_lineages = busco_lineages_file
+        .readLines() as Set
+
+    def ext = "_${params.busco_db_extension}"
+    def fallback = params.busco_lineage
+
+    // Add lineage to each sample and split into synchronized channels
+    ch_assemblies_with_lineage = RENAME_ASSEMBLIES.out.renamed_assemblies
+        .map { meta, assembly ->
+            // Find best matching lineage for this sample
+            def lineage = ['family', 'order', 'class', 'phylum']
+                .findResult { level ->
+                    def taxon = meta[level]
+                    if (!taxon) {
+                        log.info "  ${level}: not set"
+                        return null
+                    }
+                    def candidate = "${taxon.toLowerCase()}${ext}".toString()
+                    def found = candidate in busco_lineages
+                    found ? candidate : null
+                } ?: fallback
+
+            // Return tuple with lineage for splitting
+            tuple(meta, assembly, lineage)
+        }
+        .multiMap { meta, assembly, lineage ->
+            assemblies: tuple(meta, assembly)
+            lineages: lineage
+        }
+
+    // Specific BUSCO with per-sample lineage
+    BUSCO_SPECIFIC(
+        ch_assemblies_with_lineage.assemblies,
+        params.busco_mode,
+        ch_assemblies_with_lineage.lineages,
+        params.busco_lineages_path ?: [],
+        params.busco_config_file ?: [],
+        params.busco_clean_intermediates
+    )
+
+
 
     // input channel for the first input required by merquryfk: tuple val(meta) , path(fastk_hist), path(fastk_ktab), path(assembly), path(haplotigs)
     // to obtain this:
@@ -109,18 +157,21 @@ workflow GENOME_ASSEMBLY {
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
     emit:
-    // TODO nf-core: edit emitted channels
-    seqkit_stats                 = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
-    fastk_ktab                   = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
-    fastk_hist                   = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds             = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    megahit_contigs              = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    minia_contigs                = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
-    abyss_scaffolds              = ABYSS_ABYSSPE.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    sparseassembler_scaffolds    = SPARSEASSEMBLER.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    renamed_assemblies           = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
-    busco_batch_summary          = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt    = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    merquryfk_completeness_stats = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
-    quast_results                = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
+    seqkit_stats                       = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
+    fastk_ktab                         = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
+    fastk_hist                         = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
+    spades_scaffolds                   = SPADES.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    megahit_contigs                    = MEGAHIT.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    minia_contigs                      = MINIA.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    abyss_scaffolds                    = ABYSS_ABYSSPE.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_scaffolds          = SPARSEASSEMBLER.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    renamed_assemblies                 = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
+    busco_batch_summary                = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt          = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
+    busco_full_table                   = BUSCO_BUSCO.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
+    busco_batch_summary_specific       = BUSCO_SPECIFIC.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt_specific = BUSCO_SPECIFIC.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
+    busco_full_table_specific          = BUSCO_SPECIFIC.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
+    merquryfk_completeness_stats       = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
+    quast_results                      = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
 }
