@@ -12,9 +12,9 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
 
     input:
     tuple val(meta), path(fasta) //add fasta
-    tuple val(meta), path(bam)  // add bam file
-    tuple val(meta), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
-    tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
+    //tuple val(meta), path(bam)  // add bam file
+    //tuple val(meta), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
+    //tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
     
     output:
     tuple val(meta), path(prefix), emit: blobdir
@@ -30,14 +30,24 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
 
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
-    def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
+    //def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
     
-    """
+   // """
     blobtools create \\
         --fasta ${fasta} \\
         --meta ${yaml} \\
         --cov ${bam} \\
         --busco ${busco_args} \\
+        --threads ${task.cpus} \\
+        $args \\
+        ${prefix}
+
+   
+    //"""
+
+     """
+    blobtools create \\
+        --fasta ${fasta} \\
         --threads ${task.cpus} \\
         $args \\
         ${prefix}
