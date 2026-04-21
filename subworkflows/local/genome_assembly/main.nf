@@ -1,4 +1,5 @@
 include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
+include { GETSEQKITK                            } from '../../../modules/local/getseqkitk/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
 include { KMERGENIE                            } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                        } from '../../../modules/local/getkmergeniek/main'
@@ -27,6 +28,7 @@ workflow GENOME_ASSEMBLY {
     main:
 
     SEQKIT_STATS ( ch_fastp_reads )
+    GETSEQKITK   ( SEQKIT_STATS.out.stats )
 //    SEQKIT_STATS_MERGED
     FASTK_FASTK  ( ch_fastp_reads )
 
@@ -139,42 +141,7 @@ workflow GENOME_ASSEMBLY {
 
     // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
     // def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
-    //     .mix(SPADES_KMERGENIE.out.scaffolds)
-    //     .map { meta, scaffolds ->
-    //         def assembler = 'spades'
-    //         def strategy = meta.kmer_strategy
-    //         def new_meta = meta + [
-    //             assembly_id: "${meta.id}_${assembler}_${strategy}",
-    //             assembler: assembler,
-    //             id: meta.id
-    //         ]
-    //         [new_meta, scaffolds, "${meta.id}_${assembler}_${strategy}.fa"]
-    // }
-    // .mix( MEGAHIT_MANUAL.out.contigs.map { meta, contigs ->
-    //     def assembler = 'megahit'
-    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'megahit', id: meta.id]
-    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    // } )
-    // .mix( MINIA_MANUAL.out.contigs.map { meta, contigs ->
-    //     def assembler = 'minia'
-    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'minia', id: meta.id]
-    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    // } )
-    // .mix( ABYSS_ABYSSPE_MANUAL.out.contigs.map { meta, contigs ->
-    //     def assembler = 'abyss'
-    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'abyss', id: meta.id]
-    //     return [ new_meta, contigs, "${meta.id}_${assembler}.fa" ]
-    // } )
-    // .mix( SPARSEASSEMBLER_MANUAL.out.scaffolds
-    // .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
-    // .unique { meta, assembly -> meta.id }
-    // .map { meta, assembly ->
-    //     def assembler = 'sparseassembler'
-    //     def new_meta = meta + [assembly_id: "${meta.id}_${assembler}", assembler: 'sparseassembler', id: meta.id]
-    //     return [ new_meta, assembly, "${meta.id}_${assembler}.fa" ]
-    // } )
 
-    // simplify channel for renaming assemblies
     def createAssemblyMeta = { meta, assembly, assembler ->
         def strategy = meta.kmer_strategy
         def new_meta = meta + [
@@ -182,7 +149,7 @@ workflow GENOME_ASSEMBLY {
             assembler: assembler,
             id: meta.id
         ]
-        return [new_meta, assembly, "${meta.id}_${assembler}_${strategy}.fa"]
+        return [new_meta, assembly, "${meta.id}_${strategy}_${assembler}.fa"]
     }
 
     def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
@@ -280,6 +247,7 @@ workflow GENOME_ASSEMBLY {
 
     emit:
     seqkit_stats                       = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
+    getseqkitk_kmer                    = GETSEQKITK.out.seqkitkmer_txt              // channel: [ val(meta), path('*.txt') ]
     kmergenie_html                     = KMERGENIE.out.html             // channel: [ val(meta), path('*.html') ]
     getkmergeniek_k                    = GETKMERGENIEK.out.kmer_txt              // channel: [ val(meta), path('*.k') ]
     fastk_ktab                         = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
