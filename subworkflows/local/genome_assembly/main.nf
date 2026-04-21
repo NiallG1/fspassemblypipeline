@@ -62,7 +62,6 @@ workflow GENOME_ASSEMBLY {
 
             def default_kmers_megahit = [21, 29, 39, 59, 79, 99, 119, 141] // megahit recommended defaults
             def max_kmer_megahit = 141 // megahit max kmer limit
-            def max_step_megahit = 28  // Maximum allowed gap between consecutive kmers in megahit
 
             // Validate predicted kmer for spades: must be odd, in range [15, 127], and not already in list
             def is_valid_spades = (kmergenie_kmer >= 15 &&
@@ -97,15 +96,6 @@ workflow GENOME_ASSEMBLY {
                 kmer_list_megahit: kmer_list_megahit.join(','),
                 single_kmer: single_kmer
             ]
-
-            log.info """
-            Sample: ${id}
-            Predicted kmer: ${kmergenie_kmer}
-            SPAdes - Valid: ${is_valid_spades}, List: ${kmer_list_spades.join(',')}
-            MEGAHIT - Valid: ${is_valid_megahit}, List: ${kmer_list_megahit.join(',')}
-            Single k-mer: ${single_kmer}
-            """.stripIndent()
-
             [enriched_meta, reads]
         }
 
@@ -123,7 +113,6 @@ workflow GENOME_ASSEMBLY {
 
             def default_kmers_megahit = [21, 29, 39, 59, 79, 99, 119, 141] // megahit recommended defaults
             def max_kmer_megahit = 141 // megahit max kmer limit
-            def max_step_megahit = 28  // Maximum allowed gap between consecutive kmers in megahit
 
             // Validate predicted kmer for spades: must be odd, in range [15, 127], and not already in list
             def is_valid_spades = (seqkit_kmer >= 15 &&
@@ -158,15 +147,6 @@ workflow GENOME_ASSEMBLY {
                 kmer_list_megahit: kmer_list_megahit.join(','),
                 single_kmer: single_kmer
             ]
-
-            log.info """
-            Sample: ${id}
-            Predicted kmer: ${seqkit_kmer}
-            SPAdes - Valid: ${is_valid_spades}, List: ${kmer_list_spades.join(',')}
-            MEGAHIT - Valid: ${is_valid_megahit}, List: ${kmer_list_megahit.join(',')}
-            Single k-mer: ${single_kmer}
-            """.stripIndent()
-
             [enriched_meta, reads]
         }
 
