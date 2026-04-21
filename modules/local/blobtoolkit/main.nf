@@ -13,10 +13,9 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     input:
     tuple val(meta), path(fasta) //add fasta
     tuple val(meta), path(bam)  // add bam file
-    tuple val(meta1), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
+    tuple val(meta), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
     tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
-    path(taxdump, stageAs: 'taxdump/taxdump.json') //may not need this 
-
+    
     output:
     tuple val(meta), path(prefix), emit: blobdir
     tuple val("${task.process}"), val('blobtoolkit'), eval("btk --version | cut -d' ' -f2 | sed 's/v//'"), topic: versions, emit: versions_blobtoolkit
@@ -32,15 +31,13 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
     def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
-    def hits_blastp = blastp ? "--hits ${blastp}" : ""
+    
     """
-    blobtools replace \\
-        --bedtsvdir windowstats \\
+    blobtools create \\
+        --fasta ${fasta} \\
         --meta ${yaml} \\
-        --taxdump \$(dirname ${taxdump}) \\
-        --taxrule buscogenes \\
-        ${busco_args} \\
-        ${hits_blastp} \\
+        --cov ${bam} \\
+        --busco ${busco_args} \\
         --threads ${task.cpus} \\
         $args \\
         ${prefix}
@@ -50,14 +47,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
    
     stub:
     def args = task.ext.args ?: ''
-    
-    // TODO nf-core: A stub section should mimic the execution of the original module as best as possible
-    //               Have a look at the following examples:
-    //               Simple example: https://github.com/nf-core/modules/blob/818474a292b4860ae8ff88e149fbcda68814114d/modules/nf-core/bcftools/annotate/main.nf#L47-L63
-    //               Complex example: https://github.com/nf-core/modules/blob/818474a292b4860ae8ff88e149fbcda68814114d/modules/nf-core/bedtools/split/main.nf#L38-L54
-    // TODO nf-core: If the module doesn't use arguments ($args), you SHOULD remove:
-    //               - The definition of args `def args = task.ext.args ?: ''` above.
-    //               - The use of the variable in the script `echo $args ` below.
+  
     """
     echo $args
     
