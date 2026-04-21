@@ -6,14 +6,19 @@ include { GETKMERGENIEK                        } from '../../../modules/local/ge
 include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES as SPADES_MANUAL              } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_KMERGENIE           } from '../../../modules/nf-core/spades/main'
+include { SPADES as SPADES_READS_LENGTH         } from '../../../modules/nf-core/spades/main'
 include { MEGAHIT as MEGAHIT_MANUAL            } from '../../../modules/nf-core/megahit/main'
 include { MEGAHIT as MEGAHIT_KMERGENIE         } from '../../../modules/nf-core/megahit/main'
+include { MEGAHIT as MEGAHIT_READS_LENGTH         } from '../../../modules/nf-core/megahit/main'
 include { MINIA as MINIA_MANUAL                } from '../../../modules/nf-core/minia/main'
 include { MINIA as MINIA_KMERGENIE             } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_READS_LENGTH             } from '../../../modules/nf-core/minia/main'
 include { ABYSS_ABYSSPE as ABYSS_MANUAL } from '../../../modules/nf-core/abyss/abysspe/main'
 include { ABYSS_ABYSSPE as ABYSS_KMERGENIE } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH } from '../../../modules/nf-core/abyss/abysspe/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH } from '../../../modules/local/sparseassembler/main'
 include { RENAME_ASSEMBLIES                    } from '../../../modules/local/rename_assemblies/main'
 include { BUSCO_BUSCO                          } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC        } from '../../../modules/nf-core/busco/busco/main'
@@ -35,6 +40,8 @@ workflow GENOME_ASSEMBLY {
     KMERGENIE    ( ch_fastp_reads )
 
     GETKMERGENIEK ( KMERGENIE.out.html )
+
+// ==================== K-mer strategies for genome assembly =======================
 
     // Channel 1: Manual strategy (uses config values)
     ch_reads_manual_strategy = ch_fastp_reads
@@ -102,7 +109,73 @@ workflow GENOME_ASSEMBLY {
             [enriched_meta, reads]
         }
 
-    // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
+
+    // Channel 3: reads_length strategy (adds kmer calculated from median reads length to default list)
+    ch_reads_reads_length_strategy = ch_fastp_reads
+        .map { meta, reads -> [meta.id, meta, reads] }
+        .join(GETSEQKITK.out.seqkitkmer_txt.map { meta, kmer_file ->
+            [meta.id, kmer_file.text.trim() as Integer]
+        })
+        .map { id, meta, reads, seqkit_kmer ->
+            // Build k-mer list: add predicted kmer to defaults if valid
+            def default_kmers_spades = [21, 33, 55, 77]  // spades recommended defaults
+            def max_kmer_spades = 127  // spades max kmer limit
+
+            def default_kmers_megahit = [21, 29, 39, 59, 79, 99, 119, 141] // megahit recommended defaults
+            def max_kmer_megahit = 141 // megahit max kmer limit
+            def max_step_megahit = 28  // Maximum allowed gap between consecutive kmers in megahit
+
+            // Validate predicted kmer for spades: must be odd, in range [15, 127], and not already in list
+            def is_valid_spades = (seqkit_kmer >= 15 &&
+                            seqkit_kmer <= max_kmer_spades &&
+                            seqkit_kmer % 2 == 1 &&
+                            !(seqkit_kmer in default_kmers_spades))
+
+            // Validate predicted kmer for megahit: must be odd, in range [15, 141], and not already in list
+            def is_valid_megahit = (seqkit_kmer >= 15 &&
+                            seqkit_kmer <= max_kmer_megahit &&
+                            seqkit_kmer % 2 == 1 &&
+                            !(seqkit_kmer in default_kmers_megahit))
+
+            // Build final k-mer lists for spades
+            def kmer_list_spades = is_valid_spades ?
+                (default_kmers_spades + [seqkit_kmer]).sort() :
+                default_kmers_spades
+
+            // Build final k-mer lists for megahit
+            def kmer_list_megahit = is_valid_megahit ?
+                (default_kmers_megahit + [seqkit_kmer]).sort() :
+                default_kmers_megahit
+
+            // For assemblers that only take a single k-mer, use the predicted k-mer if it's valid (between 15 and 127), or fall back to a fixed value (25)
+            def single_kmer = (seqkit_kmer >= 15 && seqkit_kmer <= 127 && seqkit_kmer % 2 == 1) ? seqkit_kmer : 25
+
+            // Enrich metadata with k-mer strategy and lists
+            def enriched_meta = meta + [
+                kmer_strategy: 'reads_length',
+                predicted_kmer: seqkit_kmer,
+                kmer_list_spades: kmer_list_spades.join(','),
+                kmer_list_megahit: kmer_list_megahit.join(','),
+                single_kmer: single_kmer
+            ]
+
+            log.info """
+            Sample: ${id}
+            Predicted kmer: ${seqkit_kmer}
+            SPAdes - Valid: ${is_valid_spades}, List: ${kmer_list_spades.join(',')}
+            MEGAHIT - Valid: ${is_valid_megahit}, List: ${kmer_list_megahit.join(',')}
+            Single k-mer: ${single_kmer}
+            """.stripIndent()
+
+            [enriched_meta, reads]
+        }
+
+// =================== End of k-mer strategies for genome assembly =======================
+
+
+// =================== Genome assembly with different assemblers and k-mer strategies =======================
+
+    // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs
     // SPADES: [ meta, illumina, pacbio, nanopore ]
     // ch_input_reads_spades = ch_fastp_reads.map { meta, reads -> [ meta, reads, [], [] ] }
 
@@ -116,6 +189,11 @@ workflow GENOME_ASSEMBLY {
     []
     )
 
+        SPADES_READS_LENGTH       ( ch_reads_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
+    [],
+    []
+    )
+
     // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
     ch_input_reads_megahit_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
@@ -124,24 +202,36 @@ workflow GENOME_ASSEMBLY {
     ch_input_reads_megahit_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
     MEGAHIT_KMERGENIE ( ch_input_reads_megahit_kmergenie )
 
+    ch_input_reads_megahit_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+    MEGAHIT_READS_LENGTH ( ch_input_reads_megahit_reads_length )
+
     MINIA_MANUAL        ( ch_reads_manual_strategy )
     MINIA_KMERGENIE     ( ch_reads_kmergenie_strategy )
+    MINIA_READS_LENGTH     ( ch_reads_reads_length_strategy )
 
     ch_abyss_input_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
     ABYSS_MANUAL ( ch_abyss_input_manual, params.abyss_kmer )
 
     // create an input channel with just the kmer value for abyss and sparseassembler, as they require it as input (can't be passed from the extra args)
     ch_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
+    ch_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
 
     ch_abyss_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads, [] ] }
     ABYSS_KMERGENIE ( ch_abyss_input_kmergenie, ch_kmergenie_single_kmer )
 
+    ch_abyss_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads, [] ] }
+    ABYSS_READS_LENGTH ( ch_abyss_input_reads_length, ch_reads_length_single_kmer )
+
     SPARSEASSEMBLER_MANUAL ( ch_reads_manual_strategy, params.sparseassembler_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
     SPARSEASSEMBLER_KMERGENIE ( ch_reads_kmergenie_strategy, ch_kmergenie_single_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
+    SPARSEASSEMBLER_READS_LENGTH ( ch_reads_reads_length_strategy, ch_reads_length_single_kmer, params.sparseassembler_genome_size, params.sparseassembler_expected_coverage )
 
-    // input channel for renaming the assemblies. I need to change the meta.id to include the assembler and avoid conflicts in the output names.
-    // def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
+// =================== End of genome assembly with different assemblers and k-mer strategies =======================
 
+
+// ==================== Redefining meta.id for downstream processes to avoid conflicts in the output names =======================
+
+    // Add assembler name to meta.id for all assemblies to avoid conflicts in downstream processes that use meta.id for naming outputs (e.g. busco, quast, merquryfk)
     def createAssemblyMeta = { meta, assembly, assembler ->
         def strategy = meta.kmer_strategy
         def new_meta = meta + [
@@ -152,15 +242,20 @@ workflow GENOME_ASSEMBLY {
         return [new_meta, assembly, "${meta.id}_${strategy}_${assembler}.fa"]
     }
 
+    // Create channel with new meta for downstream processes. This channel combines all assemblies from different assemblers and strategies, and maps them to the new meta with updated id.
     def ch_draft_assemblies_input = SPADES_MANUAL.out.scaffolds
         .mix(SPADES_KMERGENIE.out.scaffolds)
+        .mix(SPADES_READS_LENGTH.out.scaffolds)
         .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
         .mix( MEGAHIT_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') } )
         .mix( MEGAHIT_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') } )
+        .mix( MEGAHIT_READS_LENGTH.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') } )
         .mix( MINIA_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') } )
         .mix( MINIA_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') } )
+        .mix( MINIA_READS_LENGTH.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') } )
         .mix( ABYSS_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'abyss') } )
         .mix( ABYSS_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'abyss') } )
+        .mix( ABYSS_READS_LENGTH.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'abyss') } )
         .mix( SPARSEASSEMBLER_MANUAL.out.scaffolds
             .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
             .unique { meta, assembly -> meta.id }
@@ -171,6 +266,16 @@ workflow GENOME_ASSEMBLY {
             .unique { meta, assembly -> meta.id }
             .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
         )
+        .mix( SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
+            .concat(SPARSEASSEMBLER_READS_LENGTH.out.contigs)
+            .unique { meta, assembly -> meta.id }
+            .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+        )
+
+// ==================== End of redefining meta.id for downstream processes to avoid conflicts in the output names =======================
+
+
+// =================== Draft assemblies QC =======================
 
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
 
@@ -246,31 +351,37 @@ workflow GENOME_ASSEMBLY {
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
     emit:
-    seqkit_stats                       = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
-    getseqkitk_kmer                    = GETSEQKITK.out.seqkitkmer_txt              // channel: [ val(meta), path('*.txt') ]
-    kmergenie_html                     = KMERGENIE.out.html             // channel: [ val(meta), path('*.html') ]
-    getkmergeniek_k                    = GETKMERGENIEK.out.kmer_txt              // channel: [ val(meta), path('*.k') ]
-    fastk_ktab                         = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
-    fastk_hist                         = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds_manual            = SPADES_MANUAL.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    spades_scaffolds_kmergenie         = SPADES_KMERGENIE.out.scaffolds          // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    megahit_contigs_manual             = MEGAHIT_MANUAL.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    megahit_contigs_kmergenie          = MEGAHIT_KMERGENIE.out.contigs           // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    minia_contigs_manual               = MINIA_MANUAL.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
-    minia_contigs_kmergenie            = MINIA_KMERGENIE.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
-    abyss_scaffolds_manual             = ABYSS_MANUAL.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    abyss_scaffolds_kmergenie          = ABYSS_KMERGENIE.out.scaffolds   // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    sparseassembler_scaffolds_manual          = SPARSEASSEMBLER_MANUAL.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
-    sparseassembler_contigs_manual            = SPARSEASSEMBLER_MANUAL.out.contigs      // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    seqkit_stats                                = SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
+    getseqkitk_kmer                             = GETSEQKITK.out.seqkitkmer_txt              // channel: [ val(meta), path('*.txt') ]
+    kmergenie_html                              = KMERGENIE.out.html             // channel: [ val(meta), path('*.html') ]
+    getkmergeniek_k                             = GETKMERGENIEK.out.kmer_txt              // channel: [ val(meta), path('*.k') ]
+    fastk_ktab                                  = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
+    fastk_hist                                  = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
+    spades_scaffolds_manual                     = SPADES_MANUAL.out.scaffolds             // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    spades_scaffolds_kmergenie                  = SPADES_KMERGENIE.out.scaffolds          // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    spades_scaffolds_reads_length               = SPADES_READS_LENGTH.out.scaffolds     // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    megahit_contigs_manual                      = MEGAHIT_MANUAL.out.contigs              // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    megahit_contigs_kmergenie                   = MEGAHIT_KMERGENIE.out.contigs           // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    megahit_contigs_reads_length                = MEGAHIT_READS_LENGTH.out.contigs        // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    minia_contigs_manual                        = MINIA_MANUAL.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    minia_contigs_kmergenie                     = MINIA_KMERGENIE.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    minia_contigs_reads_length                  = MINIA_READS_LENGTH.out.contigs                // channel: [ val(meta), path('*.contigs.fa') ]
+    abyss_scaffolds_manual                      = ABYSS_MANUAL.out.scaffolds      // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    abyss_scaffolds_kmergenie                   = ABYSS_KMERGENIE.out.scaffolds   // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    abyss_scaffolds_reads_length                = ABYSS_READS_LENGTH.out.scaffolds   // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_scaffolds_manual            = SPARSEASSEMBLER_MANUAL.out.scaffolds    // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_contigs_manual              = SPARSEASSEMBLER_MANUAL.out.contigs      // channel: [ val(meta), path('*.contigs.fa.gz') ]
     sparseassembler_scaffolds_kmergenie         = SPARSEASSEMBLER_KMERGENIE.out.scaffolds // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
     sparseassembler_contigs_kmergenie           = SPARSEASSEMBLER_KMERGENIE.out.contigs   // channel: [ val(meta), path('*.contigs.fa.gz') ]
-    renamed_assemblies                 = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
-    busco_batch_summary                = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt          = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    busco_full_table                   = BUSCO_BUSCO.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
-    busco_batch_summary_specific       = BUSCO_SPECIFIC.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt_specific = BUSCO_SPECIFIC.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    busco_full_table_specific          = BUSCO_SPECIFIC.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
-    merquryfk_completeness_stats       = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
-    quast_results                      = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
+    sparseassembler_scaffolds_reads_length      = SPARSEASSEMBLER_READS_LENGTH.out.scaffolds // channel: [ val(meta), path('*.scaffolds.fa.gz') ]
+    sparseassembler_contigs_reads_length        = SPARSEASSEMBLER_READS_LENGTH.out.contigs   // channel: [ val(meta), path('*.contigs.fa.gz') ]
+    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
+    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
+    busco_full_table                            = BUSCO_BUSCO.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
+    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
+    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
+    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
+    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
+    quast_results                               = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
 }
