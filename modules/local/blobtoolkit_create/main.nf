@@ -2,13 +2,9 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     tag "$meta.id"
     label 'process_medium'
 
-    container "docker.io/genomehubs/blobtoolkit:4.4.6"
-
     
     conda "${moduleDir}/environment.yml"
-    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/YOUR-TOOL-HERE':
-        'biocontainers/YOUR-TOOL-HERE' }"
+    container "docker.io/genomehubs/blobtoolkit:4.4.6"
 
     input:
     tuple val(meta), path(fasta) //add fasta
