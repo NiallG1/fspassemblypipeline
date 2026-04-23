@@ -32,27 +32,14 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     prefix = task.ext.prefix ?: "${meta.id}"
     //def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
     
-   // """
-    blobtools create \\
-        --fasta ${fasta} \\
-        --meta ${yaml} \\
-        --cov ${bam} \\
-        --busco ${busco_args} \\
-        --threads ${task.cpus} \\
-        $args \\
-        ${prefix}
-
    
-    //"""
-
-     """
+    """
     blobtools create \\
         --fasta ${fasta} \\
         --threads ${task.cpus} \\
         $args \\
         ${prefix}
 
-   
     """
    
     stub:
