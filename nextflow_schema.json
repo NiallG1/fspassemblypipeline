@@ -265,8 +265,7 @@
             "type": ["string", "null"]
         },
         "fastp_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "fastk_kmer": {
             "type": "integer",
@@ -285,16 +284,14 @@
             "default": true
         },
         "fastk_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "histex_g_output": {
             "type": "boolean",
             "default": true
         },
         "histex_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "spades_kmer_list": {
             "type": "string",
@@ -312,12 +309,12 @@
             "type": "string",
             "default": "--no-mercy --min-count 3"
         },
+        "minia_extra_args": {
+            "type": "string"
+        },
         "minia_kmer": {
             "type": "integer",
             "default": 21
-        },
-        "minia_extra_args": {
-            "type": "string"
         },
         "busco_mode": {
             "type": "string",
@@ -391,8 +388,19 @@
             "default": "odb12"
         },
         "lineages_list_file": {
-            "type": "string",
-            "default": "data/fungi_busco_lineages.txt"
+            "type": "string"
+        },
+        "skip_manual_strategy": {
+            "type": "boolean"
+        },
+        "skip_kmergenie_strategy": {
+            "type": "boolean"
+        },
+        "skip_reads_length_strategy": {
+            "type": "boolean"
+        },
+        "skip_spades": {
+            "type": "boolean"
         }
     }
 }
