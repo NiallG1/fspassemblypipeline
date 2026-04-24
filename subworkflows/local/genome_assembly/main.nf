@@ -1,29 +1,29 @@
-include { SEQKIT_STATS                         } from '../../../modules/nf-core/seqkit/stats/main'
-include { GETSEQKITK                            } from '../../../modules/local/getseqkitk/main'
+include { SEQKIT_STATS                                     } from '../../../modules/nf-core/seqkit/stats/main'
+include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
 // include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
-include { KMERGENIE                            } from '../../../modules/nf-core/kmergenie/main'
-include { GETKMERGENIEK                        } from '../../../modules/local/getkmergeniek/main'
-include { FASTK_FASTK                          } from '../../../modules/nf-core/fastk/fastk/main'
-include { SPADES as SPADES_MANUAL              } from '../../../modules/nf-core/spades/main'
-include { SPADES as SPADES_KMERGENIE           } from '../../../modules/nf-core/spades/main'
-include { SPADES as SPADES_READS_LENGTH         } from '../../../modules/nf-core/spades/main'
-include { MEGAHIT as MEGAHIT_MANUAL            } from '../../../modules/nf-core/megahit/main'
-include { MEGAHIT as MEGAHIT_KMERGENIE         } from '../../../modules/nf-core/megahit/main'
-include { MEGAHIT as MEGAHIT_READS_LENGTH         } from '../../../modules/nf-core/megahit/main'
-include { MINIA as MINIA_MANUAL                } from '../../../modules/nf-core/minia/main'
-include { MINIA as MINIA_KMERGENIE             } from '../../../modules/nf-core/minia/main'
-include { MINIA as MINIA_READS_LENGTH             } from '../../../modules/nf-core/minia/main'
-include { ABYSS_ABYSSPE as ABYSS_MANUAL } from '../../../modules/nf-core/abyss/abysspe/main'
-include { ABYSS_ABYSSPE as ABYSS_KMERGENIE } from '../../../modules/nf-core/abyss/abysspe/main'
-include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH } from '../../../modules/nf-core/abyss/abysspe/main'
-include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL } from '../../../modules/local/sparseassembler/main'
-include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE } from '../../../modules/local/sparseassembler/main'
-include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH } from '../../../modules/local/sparseassembler/main'
-include { RENAME_ASSEMBLIES                    } from '../../../modules/local/rename_assemblies/main'
-include { BUSCO_BUSCO                          } from '../../../modules/nf-core/busco/busco/main'
-include { BUSCO_BUSCO as BUSCO_SPECIFIC        } from '../../../modules/nf-core/busco/busco/main'
-include { MERQURYFK_MERQURYFK                  } from '../../../modules/nf-core/merquryfk/merquryfk/main'
-include { QUAST                                } from '../../../modules/nf-core/quast/main'
+include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
+include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
+include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
+include { SPADES as SPADES_MANUAL                          } from '../../../modules/nf-core/spades/main'
+include { SPADES as SPADES_KMERGENIE                       } from '../../../modules/nf-core/spades/main'
+include { SPADES as SPADES_READS_LENGTH                    } from '../../../modules/nf-core/spades/main'
+include { MEGAHIT as MEGAHIT_MANUAL                        } from '../../../modules/nf-core/megahit/main'
+include { MEGAHIT as MEGAHIT_KMERGENIE                     } from '../../../modules/nf-core/megahit/main'
+include { MEGAHIT as MEGAHIT_READS_LENGTH                  } from '../../../modules/nf-core/megahit/main'
+include { MINIA as MINIA_MANUAL                            } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_KMERGENIE                         } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_READS_LENGTH                      } from '../../../modules/nf-core/minia/main'
+include { ABYSS_ABYSSPE as ABYSS_MANUAL                    } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_KMERGENIE                 } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modules/nf-core/abyss/abysspe/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
+include { RENAME_ASSEMBLIES                                } from '../../../modules/local/rename_assemblies/main'
+include { BUSCO_BUSCO                                      } from '../../../modules/nf-core/busco/busco/main'
+include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
+include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
+include { QUAST                                            } from '../../../modules/nf-core/quast/main'
 
 workflow GENOME_ASSEMBLY {
 
@@ -51,9 +51,18 @@ workflow GENOME_ASSEMBLY {
     // KMERGENIE and GETKMERGENIEK only run if skip_kmergenie_strategy is false.
     // The channel consequently is only populated if skip_kmergenie_strategy is false.
 
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_kmergenie_html = channel.empty()
+    def ch_getkmergeniek_k = channel.empty()
+
     if (!params.skip_kmergenie_strategy) {
         KMERGENIE(ch_fastp_reads)
         GETKMERGENIEK(KMERGENIE.out.html)
+
+        // Capture output for emits (avoids using conditionals in emits section)
+        ch_kmergenie_html = KMERGENIE.out.html
+        ch_getkmergeniek_k = GETKMERGENIEK.out.kmer_txt
+
         ch_reads_kmergenie_strategy = ch_fastp_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file ->
@@ -108,9 +117,19 @@ workflow GENOME_ASSEMBLY {
     // SEQKIT_STATS, GETSEQKITK only run if skip_reads_length_strategy is false.
     // The channel consequently is only populated if skip_reads_length_strategy is false.
 
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_seqkit_stats = channel.empty()
+    def ch_getseqkitk_kmer = channel.empty()
+
     if (!params.skip_reads_length_strategy) {
         SEQKIT_STATS(ch_fastp_reads)
         GETSEQKITK(SEQKIT_STATS.out.stats)
+
+        // Capture output for emits (avoids using conditionals in emits section)
+        ch_seqkit_stats = SEQKIT_STATS.out.stats
+        ch_getseqkitk_kmer = GETSEQKITK.out.seqkitkmer_txt
+
         ch_reads_reads_length_strategy = ch_fastp_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETSEQKITK.out.seqkitkmer_txt.map { meta, kmer_file ->
@@ -185,6 +204,12 @@ workflow GENOME_ASSEMBLY {
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
 
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_spades_scaffolds_manual = channel.empty()
+    def ch_spades_scaffolds_kmergenie = channel.empty()
+    def ch_spades_scaffolds_reads_length = channel.empty()
+
     if (!params.skip_spades) {
 
         if (!params.skip_manual_strategy) {
@@ -193,6 +218,9 @@ workflow GENOME_ASSEMBLY {
                 [],
                 []
             )
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_spades_scaffolds_manual = SPADES_MANUAL.out.scaffolds
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPADES_MANUAL.out.scaffolds
                     .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
@@ -205,6 +233,11 @@ workflow GENOME_ASSEMBLY {
                 [],
                 []
             )
+
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_spades_scaffolds_kmergenie = SPADES_KMERGENIE.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPADES_KMERGENIE.out.scaffolds
                     .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
@@ -217,6 +250,11 @@ workflow GENOME_ASSEMBLY {
                 [],
                 []
             )
+
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_spades_scaffolds_reads_length = SPADES_READS_LENGTH.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPADES_READS_LENGTH.out.scaffolds
                     .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
@@ -230,12 +268,22 @@ workflow GENOME_ASSEMBLY {
     // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
 
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_megahit_contigs_manual = channel.empty()
+    def ch_megahit_contigs_kmergenie = channel.empty()
+    def ch_megahit_contigs_reads_length = channel.empty()
+
     if (!params.skip_megahit) {
 
         if (!params.skip_manual_strategy) {
             ch_megahit_input_manual = ch_reads_manual_strategy.map { meta, reads -> [meta, reads[0], reads[1]] }
             MEGAHIT_MANUAL(ch_megahit_input_manual)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_megahit_contigs_manual = MEGAHIT_MANUAL.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MEGAHIT_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') }
             )
@@ -245,6 +293,10 @@ workflow GENOME_ASSEMBLY {
             ch_megahit_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
             MEGAHIT_KMERGENIE(ch_megahit_input_kmergenie)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_megahit_contigs_kmergenie = MEGAHIT_KMERGENIE.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MEGAHIT_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') }
             )
@@ -254,6 +306,10 @@ workflow GENOME_ASSEMBLY {
             ch_megahit_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
             MEGAHIT_READS_LENGTH(ch_megahit_input_reads_length)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_megahit_contigs_reads_length = MEGAHIT_READS_LENGTH.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MEGAHIT_READS_LENGTH.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'megahit') }
             )
@@ -263,11 +319,21 @@ workflow GENOME_ASSEMBLY {
     // ======= MINIA assemblies - nested conditionals (assembler × strategy) ======
     // Minia is only run if skip_minia is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with Minia assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_minia_contigs_manual = channel.empty()
+    def ch_minia_contigs_kmergenie = channel.empty()
+    def ch_minia_contigs_reads_length = channel.empty()
+
     if (!params.skip_minia) {
 
         if (!params.skip_manual_strategy) {
             MINIA_MANUAL(ch_reads_manual_strategy)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_minia_contigs_manual = MINIA_MANUAL.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MINIA_MANUAL.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') }
             )
@@ -276,6 +342,10 @@ workflow GENOME_ASSEMBLY {
         if (!params.skip_kmergenie_strategy) {
             MINIA_KMERGENIE(ch_reads_kmergenie_strategy)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_minia_contigs_kmergenie = MINIA_KMERGENIE.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MINIA_KMERGENIE.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') }
             )
@@ -284,6 +354,10 @@ workflow GENOME_ASSEMBLY {
         if (!params.skip_reads_length_strategy) {
             MINIA_READS_LENGTH(ch_reads_reads_length_strategy)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_minia_contigs_reads_length = MINIA_READS_LENGTH.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 MINIA_READS_LENGTH.out.contigs.map { meta, contigs -> createAssemblyMeta(meta, contigs, 'minia') }
             )
@@ -293,12 +367,22 @@ workflow GENOME_ASSEMBLY {
     // ======= ABYSS assemblies - nested conditionals (assembler × strategy) ======
     // ABYSS is only run if skip_abyss is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with ABYSS assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_abyss_scaffolds_manual = channel.empty()
+    def ch_abyss_scaffolds_kmergenie = channel.empty()
+    def ch_abyss_scaffolds_reads_length = channel.empty()
+
     if (!params.skip_abyss) {
 
         if (!params.skip_manual_strategy) {
             ch_abyss_input_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
             ABYSS_MANUAL(ch_abyss_input_manual, params.abyss_kmer)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_manual = ABYSS_MANUAL.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 ABYSS_MANUAL.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
             )
@@ -310,6 +394,10 @@ workflow GENOME_ASSEMBLY {
             ch_abyss_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads, [] ] }
             ABYSS_KMERGENIE(ch_abyss_input_kmergenie, ch_abyss_kmergenie_single_kmer)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_kmergenie = ABYSS_KMERGENIE.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 ABYSS_KMERGENIE.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
             )
@@ -321,6 +409,10 @@ workflow GENOME_ASSEMBLY {
             ch_abyss_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads, [] ] }
             ABYSS_READS_LENGTH(ch_abyss_input_reads_length, ch_abyss_reads_length_single_kmer)
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_reads_length = ABYSS_READS_LENGTH.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 ABYSS_READS_LENGTH.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
             )
@@ -331,6 +423,15 @@ workflow GENOME_ASSEMBLY {
     // SPARSEASSEMBLER is only run if skip_sparseassembler is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with SPARSEASSEMBLER assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
     // SPARSEASSEMBLER is a special case because it can output contigs or scaffolds depending on the parameters used and quality of the reads
+
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_sparseassembler_scaffolds_manual = channel.empty()
+    def ch_sparseassembler_contigs_manual = channel.empty()
+    def ch_sparseassembler_scaffolds_kmergenie = channel.empty()
+    def ch_sparseassembler_contigs_kmergenie = channel.empty()
+    def ch_sparseassembler_scaffolds_reads_length = channel.empty()
+    def ch_sparseassembler_contigs_reads_length = channel.empty()
+
     if (!params.skip_sparseassembler) {
 
         if (!params.skip_manual_strategy) {
@@ -341,6 +442,11 @@ workflow GENOME_ASSEMBLY {
                 params.sparseassembler_expected_coverage
             )
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_manual = SPARSEASSEMBLER_MANUAL.out.scaffolds
+            ch_sparseassembler_contigs_manual = SPARSEASSEMBLER_MANUAL.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPARSEASSEMBLER_MANUAL.out.scaffolds
                     .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
@@ -359,6 +465,11 @@ workflow GENOME_ASSEMBLY {
                 params.sparseassembler_expected_coverage
             )
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.scaffolds
+            ch_sparseassembler_contigs_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPARSEASSEMBLER_KMERGENIE.out.scaffolds
                     .concat(SPARSEASSEMBLER_KMERGENIE.out.contigs)
@@ -377,6 +488,11 @@ workflow GENOME_ASSEMBLY {
                 params.sparseassembler_expected_coverage
             )
 
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
+            ch_sparseassembler_contigs_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.contigs
+
+            // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
                     .concat(SPARSEASSEMBLER_READS_LENGTH.out.contigs)
@@ -463,37 +579,52 @@ workflow GENOME_ASSEMBLY {
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
     emit:
-    seqkit_stats                                = params.skip_reads_length_strategy ? Channel.empty() : SEQKIT_STATS.out.stats           // channel: [ val(meta), [ bam ] ]
-    getseqkitk_kmer                             = params.skip_reads_length_strategy ? Channel.empty() : GETSEQKITK.out.seqkitkmer_txt              // channel: [ val(meta), path('*.txt') ]
-    kmergenie_html                              = params.skip_kmergenie_strategy ? Channel.empty() : KMERGENIE.out.html             // channel: [ val(meta), path('*.html') ]
-    getkmergeniek_k                             = params.skip_kmergenie_strategy ? Channel.empty() : GETKMERGENIEK.out.kmer_txt              // channel: [ val(meta), path('*.k') ]
-    fastk_ktab                                  = FASTK_FASTK.out.ktab             // channel: [ val(meta), path('*.ktab') ]
-    fastk_hist                                  = FASTK_FASTK.out.hist             // channel: [ val(meta), path('*.hist') ]
-    spades_scaffolds_manual                     = (params.skip_spades || params.skip_manual_strategy) ? Channel.empty() : SPADES_MANUAL.out.scaffolds
-    spades_scaffolds_kmergenie                  = (params.skip_spades || params.skip_kmergenie_strategy) ? Channel.empty() : SPADES_KMERGENIE.out.scaffolds
-    spades_scaffolds_reads_length               = (params.skip_spades || params.skip_reads_length_strategy) ? Channel.empty() : SPADES_READS_LENGTH.out.scaffolds
-    megahit_contigs_manual                      = (params.skip_megahit || params.skip_manual_strategy) ? Channel.empty() : MEGAHIT_MANUAL.out.contigs
-    megahit_contigs_kmergenie                   = (params.skip_megahit || params.skip_kmergenie_strategy) ? Channel.empty() : MEGAHIT_KMERGENIE.out.contigs
-    megahit_contigs_reads_length                = (params.skip_megahit || params.skip_reads_length_strategy) ? Channel.empty() : MEGAHIT_READS_LENGTH.out.contigs
-    minia_contigs_manual                        = (params.skip_minia || params.skip_manual_strategy) ? Channel.empty() : MINIA_MANUAL.out.contigs
-    minia_contigs_kmergenie                     = (params.skip_minia || params.skip_kmergenie_strategy) ? Channel.empty() : MINIA_KMERGENIE.out.contigs
-    minia_contigs_reads_length                  = (params.skip_minia || params.skip_reads_length_strategy) ? Channel.empty() : MINIA_READS_LENGTH.out.contigs
-    abyss_scaffolds_manual                      = (params.skip_abyss || params.skip_manual_strategy) ? Channel.empty() : ABYSS_MANUAL.out.scaffolds
-    abyss_scaffolds_kmergenie                   = (params.skip_abyss || params.skip_kmergenie_strategy) ? Channel.empty() : ABYSS_KMERGENIE.out.scaffolds
-    abyss_scaffolds_reads_length                = (params.skip_abyss || params.skip_reads_length_strategy) ? Channel.empty() : ABYSS_READS_LENGTH.out.scaffolds
-    sparseassembler_scaffolds_manual            = (params.skip_sparseassembler || params.skip_manual_strategy) ? Channel.empty() : SPARSEASSEMBLER_MANUAL.out.scaffolds
-    sparseassembler_contigs_manual              = (params.skip_sparseassembler || params.skip_manual_strategy) ? Channel.empty() : SPARSEASSEMBLER_MANUAL.out.contigs
-    sparseassembler_scaffolds_kmergenie         = (params.skip_sparseassembler || params.skip_kmergenie_strategy) ? Channel.empty() : SPARSEASSEMBLER_KMERGENIE.out.scaffolds
-    sparseassembler_contigs_kmergenie           = (params.skip_sparseassembler || params.skip_kmergenie_strategy) ? Channel.empty() : SPARSEASSEMBLER_KMERGENIE.out.contigs
-    sparseassembler_scaffolds_reads_length      = (params.skip_sparseassembler || params.skip_reads_length_strategy) ? Channel.empty() : SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
-    sparseassembler_contigs_reads_length        = (params.skip_sparseassembler || params.skip_reads_length_strategy) ? Channel.empty() : SPARSEASSEMBLER_READS_LENGTH.out.contigs
-    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies // channel: [ val(meta), path('*.fa.gz') ]
-    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    busco_full_table                            = BUSCO_BUSCO.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
-    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary  // channel: [ val(meta), path('*.busco.batch_summary.txt') ]
-    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt  // channel: [ val(meta), path('short_summary.*.txt') ]
-    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table  // channel: [ val(meta), path('full_table.*.txt') ]
-    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats // channel: [ val(meta), path('*.completeness.stats') ]
-    quast_results                               = QUAST.out.results         // channel: [ val(meta), path("${prefix}") ]
+    // Fastk outputs (unconditional processes, it's needed as input for merquryfk)
+    fastk_ktab                                  = FASTK_FASTK.out.ktab
+    fastk_hist                                  = FASTK_FASTK.out.hist
+
+    // K-mer strategy outputs
+    seqkit_stats                                = ch_seqkit_stats
+    getseqkitk_kmer                             = ch_getseqkitk_kmer
+    kmergenie_html                              = ch_kmergenie_html
+    getkmergeniek_k                             = ch_getkmergeniek_kmer
+
+    // SPAdes outputs
+    spades_scaffolds_manual                     = ch_spades_scaffolds_manual
+    spades_scaffolds_kmergenie                  = ch_spades_scaffolds_kmergenie
+    spades_scaffolds_reads_length               = ch_spades_scaffolds_reads_length
+
+    // MEGAHIT outputs
+    megahit_contigs_manual                      = ch_megahit_contigs_manual
+    megahit_contigs_kmergenie                   = ch_megahit_contigs_kmergenie
+    megahit_contigs_reads_length                = ch_megahit_contigs_reads_length
+
+    // Minia outputs
+    minia_contigs_manual                        = ch_minia_contigs_manual
+    minia_contigs_kmergenie                     = ch_minia_contigs_kmergenie
+    minia_contigs_reads_length                  = ch_minia_contigs_reads_length
+
+    // ABySS outputs
+    abyss_scaffolds_manual                      = ch_abyss_scaffolds_manual
+    abyss_scaffolds_kmergenie                   = ch_abyss_scaffolds_kmergenie
+    abyss_scaffolds_reads_length                = ch_abyss_scaffolds_reads_length
+
+    // SparseAssembler outputs
+    sparseassembler_scaffolds_manual            = ch_sparseassembler_scaffolds_manual
+    sparseassembler_contigs_manual              = ch_sparseassembler_contigs_manual
+    sparseassembler_scaffolds_kmergenie         = ch_sparseassembler_scaffolds_kmergenie
+    sparseassembler_contigs_kmergenie           = ch_sparseassembler_contigs_kmergenie
+    sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
+    sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
+
+    // Downstream outputs (unconditional processes)
+    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
+    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary
+    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt
+    busco_full_table                            = BUSCO_BUSCO.out.full_table
+    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary
+    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt
+    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
+    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
+    quast_results                               = QUAST.out.results
 }
