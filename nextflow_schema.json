@@ -401,6 +401,18 @@
         },
         "skip_spades": {
             "type": "boolean"
+        },
+        "skip_megahit": {
+            "type": "boolean"
+        },
+        "skip_minia": {
+            "type": "boolean"
+        },
+        "skip_abyss": {
+            "type": "boolean"
+        },
+        "skip_sparseassembler": {
+            "type": "boolean"
         }
     }
 }

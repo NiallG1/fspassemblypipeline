@@ -594,7 +594,7 @@ workflow GENOME_ASSEMBLY {
     seqkit_stats                                = ch_seqkit_stats
     getseqkitk_kmer                             = ch_getseqkitk_kmer
     kmergenie_html                              = ch_kmergenie_html
-    getkmergeniek_k                             = ch_getkmergeniek_kmer
+    getkmergeniek_k                             = ch_getkmergeniek_k
 
     // SPAdes outputs
     spades_scaffolds_manual                     = ch_spades_scaffolds_manual
