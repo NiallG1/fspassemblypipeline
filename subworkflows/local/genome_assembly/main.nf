@@ -32,7 +32,13 @@ workflow GENOME_ASSEMBLY {
 
     main:
 
-    FASTK_FASTK  ( ch_fastp_reads )
+    // Add reads_type to the meta (as we will have another subworkflow handling merged reads)
+    ch_paired_reads = ch_fastp_reads.map { meta, reads ->
+        def new_meta = meta + [ reads_type: 'R1R2' ]
+        tuple(new_meta, reads)
+    }
+
+    FASTK_FASTK  ( ch_paired_reads )
 
 // ==================== K-mer strategies for genome assembly =======================
 
@@ -42,7 +48,7 @@ workflow GENOME_ASSEMBLY {
 
     // Channel 1: Manual strategy (uses config values)
     if (!params.skip_manual_strategy) {
-        ch_reads_manual_strategy = ch_fastp_reads
+        ch_reads_manual_strategy = ch_paired_reads
             .map { meta, reads ->
                 [meta + [kmer_strategy: 'manual'], reads]
             }
@@ -56,14 +62,14 @@ workflow GENOME_ASSEMBLY {
     def ch_getkmergeniek_k = channel.empty()
 
     if (!params.skip_kmergenie_strategy) {
-        KMERGENIE(ch_fastp_reads)
+        KMERGENIE(ch_paired_reads)
         GETKMERGENIEK(KMERGENIE.out.html)
 
         // Capture output for emits (avoids using conditionals in emits section)
         ch_kmergenie_html = KMERGENIE.out.html
         ch_getkmergeniek_k = GETKMERGENIEK.out.kmer_txt
 
-        ch_reads_kmergenie_strategy = ch_fastp_reads
+        ch_reads_kmergenie_strategy = ch_paired_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file ->
                 [meta.id, kmer_file.text.trim() as Integer]
@@ -123,14 +129,14 @@ workflow GENOME_ASSEMBLY {
     def ch_getseqkitk_kmer = channel.empty()
 
     if (!params.skip_reads_length_strategy) {
-        SEQKIT_STATS(ch_fastp_reads)
+        SEQKIT_STATS(ch_paired_reads)
         GETSEQKITK(SEQKIT_STATS.out.stats)
 
         // Capture output for emits (avoids using conditionals in emits section)
         ch_seqkit_stats = SEQKIT_STATS.out.stats
         ch_getseqkitk_kmer = GETSEQKITK.out.seqkitkmer_txt
 
-        ch_reads_reads_length_strategy = ch_fastp_reads
+        ch_reads_reads_length_strategy = ch_paired_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETSEQKITK.out.seqkitkmer_txt.map { meta, kmer_file ->
                 [meta.id, kmer_file.text.trim() as Integer]
@@ -187,12 +193,13 @@ workflow GENOME_ASSEMBLY {
     // Add assembler name to meta.id for all assemblies to avoid conflicts in downstream processes that use meta.id for naming outputs (e.g. busco, quast, merquryfk)
     def createAssemblyMeta = { meta, assembly, assembler ->
         def strategy = meta.kmer_strategy
+        def reads_type = meta.reads_type
         def new_meta = meta + [
-            assembly_id: "${meta.id}_${assembler}_${strategy}",
+            assembly_id: "${meta.id}_${reads_type}_${assembler}_${strategy}",
             assembler: assembler,
             id: meta.id
         ]
-        return [new_meta, assembly, "${meta.id}_${strategy}_${assembler}.fa"]
+        return [new_meta, assembly, "${meta.id}_${reads_type}_${strategy}_${assembler}.fa"]
     }
 
     // Create channel with new meta for downstream processes (after assembly). This channel combines all assemblies from different assemblers and strategies, and maps them to the new meta with updated id.
@@ -265,7 +272,7 @@ workflow GENOME_ASSEMBLY {
     // ======= Megahit assemblies - nested conditionals (assembler × strategy) ======
     // Megahit is only run if skip_megahit is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with Megahit assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
-    // Megahit needs a tuple with 3 elements as input. I can't use ch_fastp_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
+    // Megahit needs a tuple with 3 elements as input. I can't use ch_paired_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
 
 
