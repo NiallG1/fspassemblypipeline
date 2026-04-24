@@ -7,37 +7,37 @@
                 "nf-core": {
                     "abyss/abysspe": {
                         "branch": "master",
-                        "git_sha": "380cb90926b8c28558cb11479da5ff45bc4f1c5d",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "busco/busco": {
                         "branch": "master",
-                        "git_sha": "d1c0b25085d275521d7b3d91120a6e797ace83d4",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "falco": {
                         "branch": "master",
-                        "git_sha": "b2f164ca59b14d6e9ed2dd2a99fa015085396faf",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "fastk/fastk": {
                         "branch": "master",
-                        "git_sha": "4a2e3a7b7af922aa5b94b00c2e78175be15787a2",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "fastk/histex": {
                         "branch": "master",
-                        "git_sha": "1838663f8c38ccd7833be0df0e53a26b7c72b567",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "fastp": {
                         "branch": "master",
-                        "git_sha": "1fb5a73bce8e4ac7079b0a9461b23d11e877ad14",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "fcsgx/rungx": {
                         "branch": "master",
-                        "git_sha": "0f69cb9d85f8d5ae9f7db0850e583c83b9a391d2",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "genescopefk": {
@@ -47,47 +47,47 @@
                     },
                     "kmergenie": {
                         "branch": "master",
-                        "git_sha": "a035704d396cf4a22a8e28dfc9b3b371cf1aef05",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "megahit": {
                         "branch": "master",
-                        "git_sha": "e4f18d1cecc86b39daafe8bf22343b868e696c15",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "merquryfk/merquryfk": {
                         "branch": "master",
-                        "git_sha": "1838663f8c38ccd7833be0df0e53a26b7c72b567",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "minia": {
                         "branch": "master",
-                        "git_sha": "e65056da8e7247487aaecd078b07d7fd68080a78",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "multiqc": {
                         "branch": "master",
-                        "git_sha": "79b36b51048048374b642289bfe9e591ef56fe05",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "quast": {
                         "branch": "master",
-                        "git_sha": "c3ef6747c66c2d6217d067fd2dfb3412ff46bc3e",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "seqkit/stats": {
                         "branch": "master",
-                        "git_sha": "bf70cbf44b42ff4a81afcb673fcef604f5ef3a85",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "spades": {
                         "branch": "master",
-                        "git_sha": "eeeb609bd37db7d81d7f6cb7d23a73c08ac4d752",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
                     "tiara/tiara": {
                         "branch": "master",
-                        "git_sha": "240b2ee57d7cefbb276315d178285398bdb34c2f",
+                        "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     }
                 }
