@@ -8,9 +8,9 @@ include { GETKMERGENIEK                                    } from '../../../modu
 include { MEGAHIT as MEGAHIT_MANUAL                        } from '../../../modules/nf-core/megahit/main'
 include { MEGAHIT as MEGAHIT_KMERGENIE                     } from '../../../modules/nf-core/megahit/main'
 include { MEGAHIT as MEGAHIT_READS_LENGTH                  } from '../../../modules/nf-core/megahit/main'
-// include { MINIA as MINIA_MANUAL                            } from '../../../modules/nf-core/minia/main'
-// include { MINIA as MINIA_KMERGENIE                         } from '../../../modules/nf-core/minia/main'
-// include { MINIA as MINIA_READS_LENGTH                      } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_MANUAL                            } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_KMERGENIE                         } from '../../../modules/nf-core/minia/main'
+include { MINIA as MINIA_READS_LENGTH                      } from '../../../modules/nf-core/minia/main'
 // include { ABYSS_ABYSSPE as ABYSS_MANUAL                    } from '../../../modules/nf-core/abyss/abysspe/main'
 // include { ABYSS_ABYSSPE as ABYSS_KMERGENIE                 } from '../../../modules/nf-core/abyss/abysspe/main'
 // include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modules/nf-core/abyss/abysspe/main'
@@ -26,7 +26,7 @@ workflow GENOME_ASSEMBLY_MERGED {
 
     main:
 
-    // Add reads_type to the meta 
+    // Add reads_type to the meta
     ch_merged_reads = ch_fastp_reads_merged.map { meta, reads ->
         def new_meta = meta + [ reads_type: 'merged', single_end: true ]
         tuple(new_meta, reads)
@@ -315,9 +315,9 @@ workflow GENOME_ASSEMBLY_MERGED {
         }
     }
 
-    ======= MINIA assemblies - nested conditionals (assembler × strategy) ======
-    Minia is only run if skip_minia is false. Within that, each strategy is only run if its corresponding skip parameter is false.
-    The channel with Minia assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+    // ======= MINIA assemblies - nested conditionals (assembler × strategy) ======
+    // Minia is only run if skip_minia is false. Within that, each strategy is only run if its corresponding skip parameter is false.
+    // The channel with Minia assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
 
     // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
     def ch_minia_contigs_manual = channel.empty()
@@ -519,9 +519,9 @@ workflow GENOME_ASSEMBLY_MERGED {
     megahit_contigs_reads_length                = ch_megahit_contigs_reads_length
 
     // // Minia outputs
-    // minia_contigs_manual                        = ch_minia_contigs_manual
-    // minia_contigs_kmergenie                     = ch_minia_contigs_kmergenie
-    // minia_contigs_reads_length                  = ch_minia_contigs_reads_length
+    minia_contigs_manual                        = ch_minia_contigs_manual
+    minia_contigs_kmergenie                     = ch_minia_contigs_kmergenie
+    minia_contigs_reads_length                  = ch_minia_contigs_reads_length
 
     // // ABySS outputs
     // abyss_scaffolds_manual                      = ch_abyss_scaffolds_manual
