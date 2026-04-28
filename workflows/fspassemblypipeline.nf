@@ -5,6 +5,7 @@
 */
 
 include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
+include { GENOME_ASSEMBLY_MERGED } from '../subworkflows/local/genome_assembly_merged/main'
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
 include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
@@ -47,6 +48,10 @@ workflow FSPASSEMBLYPIPELINE {
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
 
+    GENOME_ASSEMBLY_MERGED (
+        PREPROCESSING.out.fastp_reads_merged,
+        PREPROCESSING.out.fastp_reads_unmerged
+    )
 
     CONTAMINATION_DETECTION(
     ch_samplesheet.bam)     // Channel: [meta, fasta, bam]
