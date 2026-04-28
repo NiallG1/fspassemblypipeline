@@ -50,7 +50,8 @@ workflow FSPASSEMBLYPIPELINE {
 
     GENOME_ASSEMBLY_MERGED (
         PREPROCESSING.out.fastp_reads_merged,
-        PREPROCESSING.out.fastp_reads_unmerged
+        PREPROCESSING.out.fastp_reads_unmerged,
+        PREPROCESSING.out.fastp_reads
     )
 
     CONTAMINATION_DETECTION(

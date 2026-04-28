@@ -11,9 +11,9 @@ include { MEGAHIT as MEGAHIT_READS_LENGTH                  } from '../../../modu
 include { MINIA as MINIA_MANUAL                            } from '../../../modules/nf-core/minia/main'
 include { MINIA as MINIA_KMERGENIE                         } from '../../../modules/nf-core/minia/main'
 include { MINIA as MINIA_READS_LENGTH                      } from '../../../modules/nf-core/minia/main'
-// include { ABYSS_ABYSSPE as ABYSS_MANUAL                    } from '../../../modules/nf-core/abyss/abysspe/main'
-// include { ABYSS_ABYSSPE as ABYSS_KMERGENIE                 } from '../../../modules/nf-core/abyss/abysspe/main'
-// include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_MANUAL                    } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_KMERGENIE                 } from '../../../modules/nf-core/abyss/abysspe/main'
+include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modules/nf-core/abyss/abysspe/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
@@ -22,7 +22,8 @@ workflow GENOME_ASSEMBLY_MERGED {
 
     take:
     ch_fastp_reads_merged // channel: [ val(meta), path(reads) ]
-    ch_fastp_reads_unmerged // channel: [ val(meta), path(reads) ] - unmerged reads after merge attempt
+    ch_fastp_reads_unmerged // channel: [ val(meta), path(reads) ] - unmerged reads after merge attempt - needed for spades
+    ch_fastp_reads // channel: [ val(meta), path(reads) ] - original paired reads, needed by abyss
 
     main:
 
@@ -363,60 +364,94 @@ workflow GENOME_ASSEMBLY_MERGED {
         }
     }
 
-    // // ======= ABYSS assemblies - nested conditionals (assembler × strategy) ======
-    // // ABYSS is only run if skip_abyss is false. Within that, each strategy is only run if its corresponding skip parameter is false.
-    // // The channel with ABYSS assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+    // ======= ABYSS assemblies - nested conditionals (assembler × strategy) ======
+    // ABYSS is only run if skip_abyss is false. Within that, each strategy is only run if its corresponding skip parameter is false.
+    // The channel with ABYSS assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
 
-    // // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    // def ch_abyss_scaffolds_manual = channel.empty()
-    // def ch_abyss_scaffolds_kmergenie = channel.empty()
-    // def ch_abyss_scaffolds_reads_length = channel.empty()
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_abyss_scaffolds_manual = channel.empty()
+    def ch_abyss_scaffolds_kmergenie = channel.empty()
+    def ch_abyss_scaffolds_reads_length = channel.empty()
 
-    // if (!params.skip_abyss) {
+    if (!params.skip_abyss) {
 
-    //     if (!params.skip_manual_strategy) {
-    //         ch_abyss_input_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
-    //         ABYSS_MANUAL(ch_abyss_input_manual, params.abyss_kmer)
+        if (!params.skip_manual_strategy) {
+            // Join trimmed PE reads with merged SE reads
+            ch_abyss_input_manual = ch_fastp_reads
+                .join(ch_fastp_reads_merged, by: 0)
+                .map { meta, reads_pe, merged ->
+                    def new_meta = meta + [kmer_strategy: 'manual', reads_type: 'merged']
+                    tuple(new_meta, reads_pe, merged)
+                }
+            ABYSS_MANUAL(ch_abyss_input_manual, params.abyss_kmer)
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_abyss_scaffolds_manual = ABYSS_MANUAL.out.scaffolds
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_manual = ABYSS_MANUAL.out.scaffolds
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             ABYSS_MANUAL.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-    //         )
-    //     }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_MANUAL.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
 
-    //     if (!params.skip_kmergenie_strategy) {
-    //         // Create k-mer channel for ABYSS (needs single kmer value)
-    //         ch_abyss_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
-    //         ch_abyss_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads, [] ] }
-    //         ABYSS_KMERGENIE(ch_abyss_input_kmergenie, ch_abyss_kmergenie_single_kmer)
+        if (!params.skip_kmergenie_strategy) {
+            // Join trimmed PE + merged SE + k-mer value
+            ch_abyss_input_kmergenie = ch_fastp_reads
+                .map { meta, reads -> [meta.id, meta, reads] }
+                .join(ch_fastp_reads_merged.map { meta, merged -> [meta.id, merged] })
+                .join(ch_reads_kmergenie_strategy.map { meta, reads -> [meta.id, meta.single_kmer] })
+                .map { id, meta, reads_pe, merged, single_kmer ->
+                    def new_meta = meta + [
+                        kmer_strategy: 'kmergenie',
+                        reads_type: 'merged',
+                        single_kmer: single_kmer
+                    ]
+                    tuple(new_meta, reads_pe, merged, single_kmer)
+                }
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_abyss_scaffolds_kmergenie = ABYSS_KMERGENIE.out.scaffolds
+            ABYSS_KMERGENIE(
+                ch_abyss_input_kmergenie.map { meta, reads_pe, merged, kmer -> [meta, reads_pe, merged] },
+                ch_abyss_input_kmergenie.map { meta, reads_pe, merged, kmer -> kmer }
+            )
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             ABYSS_KMERGENIE.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-    //         )
-    //     }
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_kmergenie = ABYSS_KMERGENIE.out.scaffolds
 
-    //     if (!params.skip_reads_length_strategy) {
-    //         // Create k-mer channel for ABYSS (needs single kmer value)
-    //         ch_abyss_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
-    //         ch_abyss_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads, [] ] }
-    //         ABYSS_READS_LENGTH(ch_abyss_input_reads_length, ch_abyss_reads_length_single_kmer)
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_KMERGENIE.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_abyss_scaffolds_reads_length = ABYSS_READS_LENGTH.out.scaffolds
+        if (!params.skip_reads_length_strategy) {
+            // Join trimmed PE + merged SE + k-mer value
+            ch_abyss_input_reads_length = ch_fastp_reads
+                .map { meta, reads -> [meta.id, meta, reads] }
+                .join(ch_fastp_reads_merged.map { meta, merged -> [meta.id, merged] })
+                .join(ch_reads_reads_length_strategy.map { meta, reads -> [meta.id, meta.single_kmer] })
+                .map { id, meta, reads_pe, merged, single_kmer ->
+                    def new_meta = meta + [
+                        kmer_strategy: 'reads_length',
+                        reads_type: 'merged',
+                        single_kmer: single_kmer
+                    ]
+                    tuple(new_meta, reads_pe, merged, single_kmer)
+                }
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             ABYSS_READS_LENGTH.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-    //         )
-    //     }
-    // }
+            ABYSS_READS_LENGTH(
+                ch_abyss_input_reads_length.map { meta, reads_pe, merged, kmer -> [meta, reads_pe, merged] },
+                ch_abyss_input_reads_length.map { meta, reads_pe, merged, kmer -> kmer }
+            )
+
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_abyss_scaffolds_reads_length = ABYSS_READS_LENGTH.out.scaffolds
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_READS_LENGTH.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
+    }
 
     // ======= SPARSEASSEMBLER assemblies - nested conditionals (assembler × strategy) ======
     // SPARSEASSEMBLER is only run if skip_sparseassembler is false. Within that, each strategy is only run if its corresponding skip parameter is false.
@@ -523,10 +558,10 @@ workflow GENOME_ASSEMBLY_MERGED {
     minia_contigs_kmergenie                     = ch_minia_contigs_kmergenie
     minia_contigs_reads_length                  = ch_minia_contigs_reads_length
 
-    // // ABySS outputs
-    // abyss_scaffolds_manual                      = ch_abyss_scaffolds_manual
-    // abyss_scaffolds_kmergenie                   = ch_abyss_scaffolds_kmergenie
-    // abyss_scaffolds_reads_length                = ch_abyss_scaffolds_reads_length
+    // ABySS outputs
+    abyss_scaffolds_manual                      = ch_abyss_scaffolds_manual
+    abyss_scaffolds_kmergenie                   = ch_abyss_scaffolds_kmergenie
+    abyss_scaffolds_reads_length                = ch_abyss_scaffolds_reads_length
 
     // SparseAssembler outputs
     sparseassembler_scaffolds_manual            = ch_sparseassembler_scaffolds_manual
