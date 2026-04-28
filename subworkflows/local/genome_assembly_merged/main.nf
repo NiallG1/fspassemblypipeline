@@ -14,9 +14,9 @@ include { MINIA as MINIA_READS_LENGTH                      } from '../../../modu
 // include { ABYSS_ABYSSPE as ABYSS_MANUAL                    } from '../../../modules/nf-core/abyss/abysspe/main'
 // include { ABYSS_ABYSSPE as ABYSS_KMERGENIE                 } from '../../../modules/nf-core/abyss/abysspe/main'
 // include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modules/nf-core/abyss/abysspe/main'
-// include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
-// include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
-// include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
+include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
 
 workflow GENOME_ASSEMBLY_MERGED {
 
@@ -418,88 +418,88 @@ workflow GENOME_ASSEMBLY_MERGED {
     //     }
     // }
 
-    // // ======= SPARSEASSEMBLER assemblies - nested conditionals (assembler × strategy) ======
-    // // SPARSEASSEMBLER is only run if skip_sparseassembler is false. Within that, each strategy is only run if its corresponding skip parameter is false.
-    // // The channel with SPARSEASSEMBLER assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
-    // // SPARSEASSEMBLER is a special case because it can output contigs or scaffolds depending on the parameters used and quality of the reads
+    // ======= SPARSEASSEMBLER assemblies - nested conditionals (assembler × strategy) ======
+    // SPARSEASSEMBLER is only run if skip_sparseassembler is false. Within that, each strategy is only run if its corresponding skip parameter is false.
+    // The channel with SPARSEASSEMBLER assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+    // SPARSEASSEMBLER is a special case because it can output contigs or scaffolds depending on the parameters used and quality of the reads
 
-    // // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    // def ch_sparseassembler_scaffolds_manual = channel.empty()
-    // def ch_sparseassembler_contigs_manual = channel.empty()
-    // def ch_sparseassembler_scaffolds_kmergenie = channel.empty()
-    // def ch_sparseassembler_contigs_kmergenie = channel.empty()
-    // def ch_sparseassembler_scaffolds_reads_length = channel.empty()
-    // def ch_sparseassembler_contigs_reads_length = channel.empty()
+    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
+    def ch_sparseassembler_scaffolds_manual = channel.empty()
+    def ch_sparseassembler_contigs_manual = channel.empty()
+    def ch_sparseassembler_scaffolds_kmergenie = channel.empty()
+    def ch_sparseassembler_contigs_kmergenie = channel.empty()
+    def ch_sparseassembler_scaffolds_reads_length = channel.empty()
+    def ch_sparseassembler_contigs_reads_length = channel.empty()
 
-    // if (!params.skip_sparseassembler) {
+    if (!params.skip_sparseassembler) {
 
-    //     if (!params.skip_manual_strategy) {
-    //         SPARSEASSEMBLER_MANUAL(
-    //             ch_reads_manual_strategy,
-    //             params.sparseassembler_kmer,
-    //             params.sparseassembler_genome_size,
-    //             params.sparseassembler_expected_coverage
-    //         )
+        if (!params.skip_manual_strategy) {
+            SPARSEASSEMBLER_MANUAL(
+                ch_reads_manual_strategy,
+                params.sparseassembler_kmer,
+                params.sparseassembler_genome_size,
+                params.sparseassembler_expected_coverage
+            )
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_sparseassembler_scaffolds_manual = SPARSEASSEMBLER_MANUAL.out.scaffolds
-    //         ch_sparseassembler_contigs_manual = SPARSEASSEMBLER_MANUAL.out.contigs
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_manual = SPARSEASSEMBLER_MANUAL.out.scaffolds
+            ch_sparseassembler_contigs_manual = SPARSEASSEMBLER_MANUAL.out.contigs
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPARSEASSEMBLER_MANUAL.out.scaffolds
-    //                 .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
-    //                 .unique { meta, assembly -> meta.id }
-    //                 .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
-    //         )
-    //     }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPARSEASSEMBLER_MANUAL.out.scaffolds
+                    .concat(SPARSEASSEMBLER_MANUAL.out.contigs)
+                    .unique { meta, assembly -> meta.id }
+                    .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+            )
+        }
 
-    //     if (!params.skip_kmergenie_strategy) {
-    //         // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
-    //         ch_sparseassembler_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
-    //         SPARSEASSEMBLER_KMERGENIE(
-    //             ch_reads_kmergenie_strategy,
-    //             ch_sparseassembler_kmergenie_single_kmer,
-    //             params.sparseassembler_genome_size,
-    //             params.sparseassembler_expected_coverage
-    //         )
+        if (!params.skip_kmergenie_strategy) {
+            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
+            ch_sparseassembler_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
+            SPARSEASSEMBLER_KMERGENIE(
+                ch_reads_kmergenie_strategy,
+                ch_sparseassembler_kmergenie_single_kmer,
+                params.sparseassembler_genome_size,
+                params.sparseassembler_expected_coverage
+            )
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_sparseassembler_scaffolds_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.scaffolds
-    //         ch_sparseassembler_contigs_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.contigs
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.scaffolds
+            ch_sparseassembler_contigs_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.contigs
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPARSEASSEMBLER_KMERGENIE.out.scaffolds
-    //                 .concat(SPARSEASSEMBLER_KMERGENIE.out.contigs)
-    //                 .unique { meta, assembly -> meta.id }
-    //                 .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
-    //         )
-    //     }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPARSEASSEMBLER_KMERGENIE.out.scaffolds
+                    .concat(SPARSEASSEMBLER_KMERGENIE.out.contigs)
+                    .unique { meta, assembly -> meta.id }
+                    .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+            )
+        }
 
-    //     if (!params.skip_reads_length_strategy) {
-    //         // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
-    //         ch_sparseassembler_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
-    //         SPARSEASSEMBLER_READS_LENGTH(
-    //             ch_reads_reads_length_strategy,
-    //             ch_sparseassembler_reads_length_single_kmer,
-    //             params.sparseassembler_genome_size,
-    //             params.sparseassembler_expected_coverage
-    //         )
+        if (!params.skip_reads_length_strategy) {
+            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
+            ch_sparseassembler_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
+            SPARSEASSEMBLER_READS_LENGTH(
+                ch_reads_reads_length_strategy,
+                ch_sparseassembler_reads_length_single_kmer,
+                params.sparseassembler_genome_size,
+                params.sparseassembler_expected_coverage
+            )
 
-    //         // Capture output for emits (avoids using conditionals in emits section)
-    //         ch_sparseassembler_scaffolds_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
-    //         ch_sparseassembler_contigs_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.contigs
+            // Capture output for emits (avoids using conditionals in emits section)
+            ch_sparseassembler_scaffolds_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
+            ch_sparseassembler_contigs_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.contigs
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
-    //                 .concat(SPARSEASSEMBLER_READS_LENGTH.out.contigs)
-    //                 .unique { meta, assembly -> meta.id }
-    //                 .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
-    //         )
-    //     }
-    // }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
+                    .concat(SPARSEASSEMBLER_READS_LENGTH.out.contigs)
+                    .unique { meta, assembly -> meta.id }
+                    .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+            )
+        }
+    }
 
     emit:
     // K-mer strategy outputs
@@ -528,11 +528,11 @@ workflow GENOME_ASSEMBLY_MERGED {
     // abyss_scaffolds_kmergenie                   = ch_abyss_scaffolds_kmergenie
     // abyss_scaffolds_reads_length                = ch_abyss_scaffolds_reads_length
 
-    // // SparseAssembler outputs
-    // sparseassembler_scaffolds_manual            = ch_sparseassembler_scaffolds_manual
-    // sparseassembler_contigs_manual              = ch_sparseassembler_contigs_manual
-    // sparseassembler_scaffolds_kmergenie         = ch_sparseassembler_scaffolds_kmergenie
-    // sparseassembler_contigs_kmergenie           = ch_sparseassembler_contigs_kmergenie
-    // sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
-    // sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
+    // SparseAssembler outputs
+    sparseassembler_scaffolds_manual            = ch_sparseassembler_scaffolds_manual
+    sparseassembler_contigs_manual              = ch_sparseassembler_contigs_manual
+    sparseassembler_scaffolds_kmergenie         = ch_sparseassembler_scaffolds_kmergenie
+    sparseassembler_contigs_kmergenie           = ch_sparseassembler_contigs_kmergenie
+    sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
+    sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
 }
