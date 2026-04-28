@@ -624,6 +624,8 @@ workflow GENOME_ASSEMBLY {
     sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
     sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
 
+    draft_assemblies = ch_draft_assemblies_input
+
     // Downstream outputs (unconditional processes)
     renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
     busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary

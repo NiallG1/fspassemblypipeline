@@ -570,4 +570,6 @@ workflow GENOME_ASSEMBLY_MERGED {
     sparseassembler_contigs_kmergenie           = ch_sparseassembler_contigs_kmergenie
     sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
     sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
+
+    draft_assemblies = ch_draft_assemblies_input
 }
