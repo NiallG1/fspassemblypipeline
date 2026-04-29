@@ -8,6 +8,9 @@ workflow BLOBTOOLS {
     ch_samplesheet 
    
     main:
+
+        // Create a channel from the BUSCO file path in config
+        ch_busco = Channel.fromPath(params.busco_file)
     
         ch_btk = ch_samplesheet
         .map { meta, files ->
@@ -18,8 +21,7 @@ workflow BLOBTOOLS {
 
             )
         }
-
-    //ch_versions = channel.empty()-think this version control is outdated
+        .combine(ch_busco)
 
     //
     // Create Blobtools dataset files
