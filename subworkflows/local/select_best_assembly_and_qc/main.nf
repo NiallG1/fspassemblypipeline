@@ -1,21 +1,30 @@
+include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
 include { RENAME_ASSEMBLIES                                } from '../../../modules/local/rename_assemblies/main'
 include { BUSCO_BUSCO                                      } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
 include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
 include { QUAST                                            } from '../../../modules/nf-core/quast/main'
+include { SELECTBESTASSEMBLY                               } from '../../../modules/local/selectbestassembly/main'
 
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     take:
-    // TODO nf-core: edit input (take) channels
-    ch_bam // channel: [ val(meta), [ bam ] ]
+    ch_draft_assemblies_paired // channel: draft assemblies from genome_assembly
+    ch_draft_assemblies_merged // channel: draft assemblies from genome_assembly_merged
+    ch_fastp_reads // needed to run fastk. We run fastk only with R1R2 reads, even for the merged assembly, so that we can see errors introduced by the merging step.
 
     main:
 
-    FASTK_FASTK  ( ch_paired_reads )
+
+    FASTK_FASTK  ( ch_fastp_reads )
 
 // =================== Draft assemblies QC =======================
+
+    // input to rename_assemblies all the assemblies coming from both assembly workflows
+
+    ch_draft_assemblies_input = ch_draft_assemblies_paired
+        .mix(ch_draft_assemblies_merged)
 
     RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
 
@@ -90,6 +99,45 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
+    // Group BUSCO summaries per sample
+    def ch_busco_per_sample = BUSCO_SPECIFIC.out.short_summaries_txt
+        .map { meta, summary -> [ meta.id, summary ] }
+        .groupTuple(by: 0)
+    // [ sample_id, [summary1, summary2, ...] ]
+
+    // QUAST.out.tsv already emits [ [id: sample_id], tsv ]
+    // map to plain id for joining
+    def ch_quast_tsv = QUAST.out.tsv
+        .map { meta, tsv -> [ meta.id, tsv ] }
+    // [ sample_id, tsv ]
+
+    // Group assemblies per sample (you already have this pattern)
+    def ch_assemblies_per_sample = RENAME_ASSEMBLIES.out.renamed_assemblies
+        .map { meta, asm -> [ meta.id, asm ] }
+        .groupTuple(by: 0)
+    // [ sample_id, [asm1, asm2, ...] ]
+
+
+    def ch_select_best_assembly_input = ch_busco_per_sample
+        .join(ch_quast_tsv,          by: 0)
+        .join(ch_assemblies_per_sample, by: 0)
+        .map { sample_id, buscos, tsv, asms ->
+            [ [id: sample_id], buscos, tsv, asms ]
+        }
+
+    SELECTBESTASSEMBLY ( ch_select_best_assembly_input )
+
+    // re-add meta information to the selected best assembly channel for downstream use
+    def ch_selected_best_assembly = SELECTBESTASSEMBLY.out.best_assembly
+        .join(SELECTBESTASSEMBLY.out.best_assembly_meta, by: 0)
+        .map { meta, fa, meta_file ->
+            def fields = meta_file.text.readLines()
+                .collectEntries { line -> line.split('=') as List }
+            [ meta + fields, fa ]
+        }
+    // emits: [[id:'sim_Com_5_10k_cov60', reads_type:'R1R2', kmer_strategy:'kmergenie', assembler:'spades'], fa]
+
+    ch_selected_best_assembly.view()
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
@@ -106,4 +154,9 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
     merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
     quast_results                               = QUAST.out.results
+    best_assembly_fasta                         = SELECTBESTASSEMBLY.out.best_assembly
+    best_assembly_label                         = SELECTBESTASSEMBLY.out.best_assembly_label
+    best_assembly_meta                          = SELECTBESTASSEMBLY.out.best_assembly_meta
+    best_assembly_busco_scores                  = SELECTBESTASSEMBLY.out.busco_scores
+    best_assembly_aun_scores                    = SELECTBESTASSEMBLY.out.aun_scores
 }
