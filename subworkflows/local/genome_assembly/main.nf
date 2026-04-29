@@ -2,7 +2,6 @@ include { SEQKIT_STATS                                     } from '../../../modu
 include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
 include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
-include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES as SPADES_MANUAL                          } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_KMERGENIE                       } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_READS_LENGTH                    } from '../../../modules/nf-core/spades/main'
@@ -539,5 +538,5 @@ workflow GENOME_ASSEMBLY {
     sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
     sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
 
-    draft_assemblies                            = ch_draft_assemblies_input
+    draft_assemblies_paired                     = ch_draft_assemblies_input
 }
