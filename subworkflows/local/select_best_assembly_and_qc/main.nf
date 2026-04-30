@@ -10,6 +10,8 @@ include { BUSCO_BUSCO as BUSCO_FINAL                       } from '../../../modu
 include { BUSCO_BUSCO as BUSCO_SPECIFIC_FINAL              } from '../../../modules/nf-core/busco/busco/main'
 include { MERQURYFK_MERQURYFK as MERQURYFK_FINAL           } from '../../../modules/nf-core/merquryfk/merquryfk/main'
 include { QUAST as QUAST_FINAL                             } from '../../../modules/nf-core/quast/main'
+include { BWAMEM2_INDEX                                    } from '../../../modules/nf-core/bwamem2/index/main'
+include { BWAMEM2_MEM                                      } from '../../../modules/nf-core/bwamem2/mem/main'
 
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
@@ -218,6 +220,29 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     QUAST_FINAL ( PYPOLCA_RUN.out.polished,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
+    BWAMEM2_INDEX ( PYPOLCA_RUN.out.polished )
+
+    // map index to meta.id for joining with reads and assembly
+    ch_index_mapped_to_id = BWAMEM2_INDEX.out.index.map { meta, index -> [ meta.id, meta, index ] }
+
+    // Join reads, polished assembly and index by meta.id to make sure they are sync and use the meta from the assembly
+    def ch_bwamem2_joined = ch_fastp_reads_by_id
+        .join(ch_polished_assembly_mapped_to_id, by: 0)
+        .join(ch_index_mapped_to_id, by: 0)
+        .map { id, meta_reads, reads, meta_asm, assembly, meta_index, index ->
+            [meta_asm, reads, assembly, index]
+        }
+
+    // Split into the three tuples expected by bwamem2: one with meta and reads, one with meta and index, one with meta and assembly
+    def ch_bwamem2_reads = ch_bwamem2_joined.map { meta, reads, assembly, index -> [meta, reads] }
+    def ch_bwamem2_index = ch_bwamem2_joined.map { meta, reads, assembly, index -> [meta, index] }
+    def ch_bwamem2_asm   = ch_bwamem2_joined.map { meta, reads, assembly, index -> [meta, assembly] }
+
+    BWAMEM2_MEM ( ch_bwamem2_reads,
+        ch_bwamem2_index,
+        ch_bwamem2_asm,
+        false // sort_bam set to false will pipe bwamem2 output into samtools view
+        )
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
@@ -249,4 +274,6 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     busco_best_assembly_short_summaries_txt_specific     = BUSCO_SPECIFIC_FINAL.out.short_summaries_txt
     busco_best_assembly_full_table_specific              = BUSCO_SPECIFIC_FINAL.out.full_table
     quast_best_assembly_results                          = QUAST_FINAL.out.results
+    merquryfk_best_assembly_completeness_stats           = MERQURYFK_FINAL.out.stats
+    bwamem2_best_assembly_bam                       = BWAMEM2_MEM.out.bam
 }
