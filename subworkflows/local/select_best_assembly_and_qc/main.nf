@@ -8,7 +8,8 @@ include { SELECTBESTASSEMBLY                               } from '../../../modu
 include { PYPOLCA_RUN                                      } from '../../../modules/nf-core/pypolca/run/main'
 include { BUSCO_BUSCO as BUSCO_FINAL                       } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC_FINAL              } from '../../../modules/nf-core/busco/busco/main'
-include { QUAST as QUAST_FINAL                            } from '../../../modules/nf-core/quast/main'
+include { MERQURYFK_MERQURYFK as MERQURYFK_FINAL           } from '../../../modules/nf-core/merquryfk/merquryfk/main'
+include { QUAST as QUAST_FINAL                             } from '../../../modules/nf-core/quast/main'
 
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
@@ -207,7 +208,16 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         params.busco_clean_intermediates
     )
 
+
+    def ch_polished_assembly_mapped_to_id = PYPOLCA_RUN.out.polished.map { meta, polished_assembly -> [ meta.id, meta, polished_assembly ] }
+
+    def ch_merquryfk_final_input = ch_combined_fastk.combine( ch_polished_assembly_mapped_to_id, by: 0 )
+        .map { sample_id, hist, ktab, meta, polished_assembly -> [ meta, hist, ktab, polished_assembly, [] ] }
+
+    MERQURYFK_FINAL ( ch_merquryfk_final_input, [[],[]], [[],[]] )
+
     QUAST_FINAL ( PYPOLCA_RUN.out.polished,[[],[]], [[],[]] ) // no reference fasta or gff for quast
+
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
@@ -224,6 +234,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     busco_full_table_specific                            = BUSCO_SPECIFIC.out.full_table
     merquryfk_completeness_stats                         = MERQURYFK_MERQURYFK.out.stats
     quast_results                                        = QUAST.out.results
+
+    // Selected best assembly and its QC
     best_assembly_fasta                                  = SELECTBESTASSEMBLY.out.best_assembly
     best_assembly_label                                  = SELECTBESTASSEMBLY.out.best_assembly_label
     best_assembly_meta                                   = SELECTBESTASSEMBLY.out.best_assembly_meta
