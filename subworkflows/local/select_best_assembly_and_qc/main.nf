@@ -12,7 +12,10 @@ include { MERQURYFK_MERQURYFK as MERQURYFK_FINAL           } from '../../../modu
 include { QUAST as QUAST_FINAL                             } from '../../../modules/nf-core/quast/main'
 include { BWAMEM2_INDEX                                    } from '../../../modules/nf-core/bwamem2/index/main'
 include { BWAMEM2_MEM                                      } from '../../../modules/nf-core/bwamem2/mem/main'
-
+include { SAMTOOLS_INDEX                                   } from '../../../modules/nf-core/samtools/index/main'
+include { SAMTOOLS_FAIDX                                   } from '../../../modules/nf-core/samtools/faidx/main'
+include { SAMTOOLS_COVERAGE                                } from '../../../modules/nf-core/samtools/coverage/main'
+include { SAMTOOLS_FLAGSTAT                                } from '../../../modules/nf-core/samtools/flagstat/main'
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
@@ -243,6 +246,40 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         ch_bwamem2_asm,
         true // sort_bam set to true will view and sort the sam file, result: sorted bam file
         )
+
+    SAMTOOLS_INDEX ( BWAMEM2_MEM.out.bam )
+
+    def ch_faidx_input = PYPOLCA_RUN.out.polished.map { meta, polished_assembly -> [meta, polished_assembly, []] }
+
+    SAMTOOLS_FAIDX (
+        ch_faidx_input,
+        false // do not produce a file containing chromosome sizes.
+     )
+
+    // Samtools coverage needs:
+    // tuple 1: meta, sorted_bam, index_sorted_bam
+    // tuple 2: meta, polished_assembly, fai_polished_assembly
+
+    def ch_coverage_input_bam = BWAMEM2_MEM.out.bam.join(SAMTOOLS_INDEX.out.index, by: 0)
+        .map { meta, bam, index -> [meta, bam, index] }
+
+    def ch_coverage_input_fasta = PYPOLCA_RUN.out.polished.join(SAMTOOLS_FAIDX.out.fai, by: 0)
+        .map { meta, polished_assembly, fai -> [meta, polished_assembly, fai] }
+
+    // ch_coverage_input_bam.view { "coverage input bam: ${it}" }
+    // ch_coverage_input_fasta.view { "coverage input fasta: ${it}" }
+
+    // the meta of these two channels is exactly the same so we can use it directly in samtools coverage without joining again
+
+    SAMTOOLS_COVERAGE (
+        ch_coverage_input_bam,
+        ch_coverage_input_fasta
+    )
+
+    // Samtools flagstats only needs one tuple containig meta, bam, index.
+    // So we can use the bam channel used for samtools coverage
+
+    SAMTOOLS_FLAGSTAT ( ch_coverage_input_bam )
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
