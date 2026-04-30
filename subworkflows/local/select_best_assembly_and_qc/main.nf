@@ -99,6 +99,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
+// =================== Select best assembly =======================
+
     // Group BUSCO summaries per sample
     def ch_busco_per_sample = BUSCO_SPECIFIC.out.short_summaries_txt
         .map { meta, summary -> [ meta.id, summary ] }
@@ -111,7 +113,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         .map { meta, tsv -> [ meta.id, tsv ] }
     // [ sample_id, tsv ]
 
-    // Group assemblies per sample (you already have this pattern)
+    // Group assemblies per sample
     def ch_assemblies_per_sample = RENAME_ASSEMBLIES.out.renamed_assemblies
         .map { meta, asm -> [ meta.id, asm ] }
         .groupTuple(by: 0)
@@ -137,7 +139,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         }
     // emits: [[id:'sim_Com_5_10k_cov60', reads_type:'R1R2', kmer_strategy:'kmergenie', assembler:'spades'], fa]
 
-    ch_selected_best_assembly.view()
+
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
