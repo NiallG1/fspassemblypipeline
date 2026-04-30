@@ -5,6 +5,7 @@ include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modu
 include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
 include { QUAST                                            } from '../../../modules/nf-core/quast/main'
 include { SELECTBESTASSEMBLY                               } from '../../../modules/local/selectbestassembly/main'
+include { PYPOLCA_RUN                                      } from '../../../modules/nf-core/pypolca/run/main'
 
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
@@ -99,6 +100,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
+// =================== Select best assembly =======================
+
     // Group BUSCO summaries per sample
     def ch_busco_per_sample = BUSCO_SPECIFIC.out.short_summaries_txt
         .map { meta, summary -> [ meta.id, summary ] }
@@ -111,7 +114,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         .map { meta, tsv -> [ meta.id, tsv ] }
     // [ sample_id, tsv ]
 
-    // Group assemblies per sample (you already have this pattern)
+    // Group assemblies per sample
     def ch_assemblies_per_sample = RENAME_ASSEMBLIES.out.renamed_assemblies
         .map { meta, asm -> [ meta.id, asm ] }
         .groupTuple(by: 0)
@@ -135,9 +138,35 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
                 .collectEntries { line -> line.split('=') as List }
             [ meta + fields, fa ]
         }
-    // emits: [[id:'sim_Com_5_10k_cov60', reads_type:'R1R2', kmer_strategy:'kmergenie', assembler:'spades'], fa]
+    // emits: [[id:'sample_id', reads_type:'R1R2', kmer_strategy:'kmergenie', assembler:'spades'], fa]
 
-    ch_selected_best_assembly.view()
+    // ch_selected_best_assembly.view { "selected best assembly: ${it}"}
+    // ch_fastp_reads.view { "fastp reads: ${it}" }
+
+// =================== Best assembly QC =======================
+
+    // Pypolca needs reads and assembly paired by meta.id. However pypolca expects two tuples as input with meta and path
+    // so we need to sync them by meta.id and then split them again into the two tuples expected by pypolca
+
+    def ch_fastp_reads_by_id = ch_fastp_reads.map { meta, reads -> [meta.id, meta, reads] }
+    def ch_selected_best_assembly_by_id = ch_selected_best_assembly.map { meta, fa -> [meta.id, meta, fa] }
+
+    // Also make sure that the meta of the assembly is carried forward.
+    // Since I need to add some steps, I'll carry forward the full meta (assembly+reads)
+
+    // Join reads and assembly by meta.id
+    def ch_reads_asm_joined = ch_selected_best_assembly_by_id.join(ch_fastp_reads_by_id, by: 0)
+    .map { id, meta_fa, fa, meta_reads, reads -> [meta_fa + meta_reads, fa, reads] }
+
+    // Split into the two tuples expected by pypolca: one with meta and reads, the other with meta and assembly
+    def ch_pypolca_reads = ch_reads_asm_joined.map { meta_merged, fa, reads -> [meta_merged, reads] }
+    def ch_pypolca_asm   = ch_reads_asm_joined.map { meta_merged, fa, reads -> [meta_merged, fa] }
+
+    PYPOLCA_RUN (
+        ch_pypolca_reads,
+        ch_pypolca_asm
+        )
+
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
@@ -159,4 +188,5 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     best_assembly_meta                          = SELECTBESTASSEMBLY.out.best_assembly_meta
     best_assembly_busco_scores                  = SELECTBESTASSEMBLY.out.busco_scores
     best_assembly_aun_scores                    = SELECTBESTASSEMBLY.out.aun_scores
+    best_assembly_pypolca                       = PYPOLCA_RUN.out.polished
 }
