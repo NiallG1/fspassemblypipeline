@@ -16,6 +16,7 @@ include { SAMTOOLS_INDEX                                   } from '../../../modu
 include { SAMTOOLS_FAIDX                                   } from '../../../modules/nf-core/samtools/faidx/main'
 include { SAMTOOLS_COVERAGE                                } from '../../../modules/nf-core/samtools/coverage/main'
 include { SAMTOOLS_FLAGSTAT                                } from '../../../modules/nf-core/samtools/flagstat/main'
+include { COVERAGEVIZ                                      } from '../../../modules/local/coverageviz/main'
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
@@ -266,9 +267,6 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     def ch_coverage_input_fasta = PYPOLCA_RUN.out.polished.join(SAMTOOLS_FAIDX.out.fai, by: 0)
         .map { meta, polished_assembly, fai -> [meta, polished_assembly, fai] }
 
-    // ch_coverage_input_bam.view { "coverage input bam: ${it}" }
-    // ch_coverage_input_fasta.view { "coverage input fasta: ${it}" }
-
     // the meta of these two channels is exactly the same so we can use it directly in samtools coverage without joining again
 
     SAMTOOLS_COVERAGE (
@@ -280,6 +278,12 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     // So we can use the bam channel used for samtools coverage
 
     SAMTOOLS_FLAGSTAT ( ch_coverage_input_bam )
+
+    // Coverageviz needs a tuple with meta, samtools coverage output (txt) and samtools flagstat output (txt)
+    def ch_coverageviz_input = SAMTOOLS_COVERAGE.out.coverage.join(SAMTOOLS_FLAGSTAT.out.flagstat, by: 0)
+        .map { meta, coverage, flagstat -> [meta, coverage, flagstat] }
+
+    COVERAGEVIZ ( ch_coverageviz_input )
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
@@ -298,12 +302,11 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     quast_results                                        = QUAST.out.results
 
     // Selected best assembly and its QC
-    best_assembly_fasta                                  = SELECTBESTASSEMBLY.out.best_assembly
     best_assembly_label                                  = SELECTBESTASSEMBLY.out.best_assembly_label
     best_assembly_meta                                   = SELECTBESTASSEMBLY.out.best_assembly_meta
     best_assembly_busco_scores                           = SELECTBESTASSEMBLY.out.busco_scores
     best_assembly_aun_scores                             = SELECTBESTASSEMBLY.out.aun_scores
-    best_assembly_pypolca                                = PYPOLCA_RUN.out.polished
+    best_assembly_polished                               = PYPOLCA_RUN.out.polished
     busco_best_assembly_batch_summary                    = BUSCO_FINAL.out.batch_summary
     busco_best_assembly_short_summaries_txt              = BUSCO_FINAL.out.short_summaries_txt
     busco_best_assembly_full_table                       = BUSCO_FINAL.out.full_table
@@ -313,4 +316,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     quast_best_assembly_results                          = QUAST_FINAL.out.results
     merquryfk_best_assembly_completeness_stats           = MERQURYFK_FINAL.out.stats
     bwamem2_best_assembly_bam                            = BWAMEM2_MEM.out.bam
+    samtools_best_assembly_coverage                      = SAMTOOLS_COVERAGE.out.coverage
+    samtools_best_assembly_flagstat                      = SAMTOOLS_FLAGSTAT.out.flagstat
+    coverageviz_best_assembly_coverage_plot              = COVERAGEVIZ.out.png
+    coverageviz_best_assembly_coverage_summary           = COVERAGEVIZ.out.summary
 }
