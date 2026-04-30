@@ -241,7 +241,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     BWAMEM2_MEM ( ch_bwamem2_reads,
         ch_bwamem2_index,
         ch_bwamem2_asm,
-        false // sort_bam set to false will pipe bwamem2 output into samtools view
+        true // sort_bam set to true will view and sort the sam file, result: sorted bam file
         )
 
     emit:
@@ -275,5 +275,5 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     busco_best_assembly_full_table_specific              = BUSCO_SPECIFIC_FINAL.out.full_table
     quast_best_assembly_results                          = QUAST_FINAL.out.results
     merquryfk_best_assembly_completeness_stats           = MERQURYFK_FINAL.out.stats
-    bwamem2_best_assembly_bam                       = BWAMEM2_MEM.out.bam
+    bwamem2_best_assembly_bam                            = BWAMEM2_MEM.out.bam
 }
