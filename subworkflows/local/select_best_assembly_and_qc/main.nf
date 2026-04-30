@@ -6,6 +6,9 @@ include { MERQURYFK_MERQURYFK                              } from '../../../modu
 include { QUAST                                            } from '../../../modules/nf-core/quast/main'
 include { SELECTBESTASSEMBLY                               } from '../../../modules/local/selectbestassembly/main'
 include { PYPOLCA_RUN                                      } from '../../../modules/nf-core/pypolca/run/main'
+include { BUSCO_BUSCO as BUSCO_FINAL                       } from '../../../modules/nf-core/busco/busco/main'
+include { BUSCO_BUSCO as BUSCO_SPECIFIC_FINAL              } from '../../../modules/nf-core/busco/busco/main'
+include { QUAST as QUAST_FINAL                            } from '../../../modules/nf-core/quast/main'
 
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
@@ -143,7 +146,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     // ch_selected_best_assembly.view { "selected best assembly: ${it}"}
     // ch_fastp_reads.view { "fastp reads: ${it}" }
 
-// =================== Best assembly QC =======================
+// =================== Best assembly correction with pypolca =======================
 
     // Pypolca needs reads and assembly paired by meta.id. However pypolca expects two tuples as input with meta and path
     // so we need to sync them by meta.id and then split them again into the two tuples expected by pypolca
@@ -167,26 +170,71 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         ch_pypolca_asm
         )
 
+// =================== Best assembly QC =======================
+
+    BUSCO_FINAL ( PYPOLCA_RUN.out.polished, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
+
+    // Add lineage to each sample and split into synchronized channels
+    ch_best_assembly_with_lineage = PYPOLCA_RUN.out.polished
+        .map { meta, assembly ->
+            // Find best matching lineage for this sample
+            def lineage = ['family', 'order', 'class', 'phylum']
+                .findResult { level ->
+                    def taxon = meta[level]
+                    if (!taxon) {
+                        log.info "  ${level}: not set"
+                        return null
+                    }
+                    def candidate = "${taxon.toLowerCase()}${ext}".toString()
+                    def found = candidate in busco_lineages
+                    found ? candidate : null
+                } ?: fallback
+
+            // Return tuple with lineage for splitting
+            tuple(meta, assembly, lineage)
+        }
+        .multiMap { meta, assembly, lineage ->
+            assembly: tuple(meta, assembly)
+            lineages: lineage
+        }
+
+    BUSCO_SPECIFIC_FINAL(
+        ch_best_assembly_with_lineage.assembly,
+        params.busco_mode,
+        ch_best_assembly_with_lineage.lineages,
+        params.busco_lineages_path ?: [],
+        params.busco_config_file ?: [],
+        params.busco_clean_intermediates
+    )
+
+    QUAST_FINAL ( PYPOLCA_RUN.out.polished,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
-    fastk_ktab                                  = FASTK_FASTK.out.ktab
-    fastk_hist                                  = FASTK_FASTK.out.hist
+    fastk_ktab                                           = FASTK_FASTK.out.ktab
+    fastk_hist                                           = FASTK_FASTK.out.hist
 
     // Draft assemblies QC
-    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
-    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary
-    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt
-    busco_full_table                            = BUSCO_BUSCO.out.full_table
-    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary
-    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt
-    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
-    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
-    quast_results                               = QUAST.out.results
-    best_assembly_fasta                         = SELECTBESTASSEMBLY.out.best_assembly
-    best_assembly_label                         = SELECTBESTASSEMBLY.out.best_assembly_label
-    best_assembly_meta                          = SELECTBESTASSEMBLY.out.best_assembly_meta
-    best_assembly_busco_scores                  = SELECTBESTASSEMBLY.out.busco_scores
-    best_assembly_aun_scores                    = SELECTBESTASSEMBLY.out.aun_scores
-    best_assembly_pypolca                       = PYPOLCA_RUN.out.polished
+    renamed_assemblies                                   = RENAME_ASSEMBLIES.out.renamed_assemblies
+    busco_batch_summary                                  = BUSCO_BUSCO.out.batch_summary
+    busco_short_summaries_txt                            = BUSCO_BUSCO.out.short_summaries_txt
+    busco_full_table                                     = BUSCO_BUSCO.out.full_table
+    busco_batch_summary_specific                         = BUSCO_SPECIFIC.out.batch_summary
+    busco_short_summaries_txt_specific                   = BUSCO_SPECIFIC.out.short_summaries_txt
+    busco_full_table_specific                            = BUSCO_SPECIFIC.out.full_table
+    merquryfk_completeness_stats                         = MERQURYFK_MERQURYFK.out.stats
+    quast_results                                        = QUAST.out.results
+    best_assembly_fasta                                  = SELECTBESTASSEMBLY.out.best_assembly
+    best_assembly_label                                  = SELECTBESTASSEMBLY.out.best_assembly_label
+    best_assembly_meta                                   = SELECTBESTASSEMBLY.out.best_assembly_meta
+    best_assembly_busco_scores                           = SELECTBESTASSEMBLY.out.busco_scores
+    best_assembly_aun_scores                             = SELECTBESTASSEMBLY.out.aun_scores
+    best_assembly_pypolca                                = PYPOLCA_RUN.out.polished
+    busco_best_assembly_batch_summary                    = BUSCO_FINAL.out.batch_summary
+    busco_best_assembly_short_summaries_txt              = BUSCO_FINAL.out.short_summaries_txt
+    busco_best_assembly_full_table                       = BUSCO_FINAL.out.full_table
+    busco_best_assembly_batch_summary_specific           = BUSCO_SPECIFIC_FINAL.out.batch_summary
+    busco_best_assembly_short_summaries_txt_specific     = BUSCO_SPECIFIC_FINAL.out.short_summaries_txt
+    busco_best_assembly_full_table_specific              = BUSCO_SPECIFIC_FINAL.out.full_table
+    quast_best_assembly_results                          = QUAST_FINAL.out.results
 }
