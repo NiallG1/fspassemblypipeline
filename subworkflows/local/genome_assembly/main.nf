@@ -42,13 +42,13 @@ workflow GENOME_ASSEMBLY {
 
 // ==================== K-mer strategies for genome assembly =======================
 
-    def ch_reads_manual_strategy = channel.empty()
-    def ch_reads_kmergenie_strategy = channel.empty()
-    def ch_reads_reads_length_strategy = channel.empty()
+    def ch_manual_strategy = channel.empty()
+    def ch_kmergenie_strategy = channel.empty()
+    def ch_reads_length_strategy = channel.empty()
 
     // Channel 1: Manual strategy (uses config values)
     if (!params.skip_manual_strategy) {
-        ch_reads_manual_strategy = ch_paired_reads
+        ch_manual_strategy = ch_paired_reads
             .map { meta, reads ->
                 [meta + [kmer_strategy: 'manual'], reads]
             }
@@ -69,7 +69,7 @@ workflow GENOME_ASSEMBLY {
         ch_kmergenie_html = KMERGENIE.out.html
         ch_getkmergeniek_k = GETKMERGENIEK.out.kmer_txt
 
-        ch_reads_kmergenie_strategy = ch_paired_reads
+        ch_kmergenie_strategy = ch_paired_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETKMERGENIEK.out.kmer_txt.map { meta, kmer_file ->
                 [meta.id, kmer_file.text.trim() as Integer]
@@ -136,7 +136,7 @@ workflow GENOME_ASSEMBLY {
         ch_seqkit_stats = SEQKIT_STATS.out.stats
         ch_getseqkitk_kmer = GETSEQKITK.out.seqkitkmer_txt
 
-        ch_reads_reads_length_strategy = ch_paired_reads
+        ch_reads_length_strategy = ch_paired_reads
             .map { meta, reads -> [meta.id, meta, reads] }
             .join(GETSEQKITK.out.seqkitkmer_txt.map { meta, kmer_file ->
                 [meta.id, kmer_file.text.trim() as Integer]
@@ -203,7 +203,7 @@ workflow GENOME_ASSEMBLY {
     }
 
     // Create channel with new meta for downstream processes (after assembly). This channel combines all assemblies from different assemblers and strategies, and maps them to the new meta with updated id.
-    def ch_draft_assemblies_input = Channel.empty()
+    def ch_draft_assemblies_input = channel.empty()
 
     // ======= Spades assemblies - nested conditionals (assembler × strategy) ======
     // Spades is only run if skip_spades is false. Within that, each strategy is only run if its corresponding skip parameter is false.
@@ -211,22 +211,15 @@ workflow GENOME_ASSEMBLY {
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
 
-
-    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    def ch_spades_scaffolds_manual = channel.empty()
-    def ch_spades_scaffolds_kmergenie = channel.empty()
-    def ch_spades_scaffolds_reads_length = channel.empty()
-
     if (!params.skip_spades) {
 
         if (!params.skip_manual_strategy) {
             SPADES_MANUAL(
-                ch_reads_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
+                ch_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
                 [],
                 []
             )
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_spades_scaffolds_manual = SPADES_MANUAL.out.scaffolds
+
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPADES_MANUAL.out.scaffolds
@@ -236,13 +229,10 @@ workflow GENOME_ASSEMBLY {
 
         if (!params.skip_kmergenie_strategy) {
             SPADES_KMERGENIE(
-                ch_reads_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
+                ch_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
                 [],
                 []
             )
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_spades_scaffolds_kmergenie = SPADES_KMERGENIE.out.scaffolds
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -253,13 +243,10 @@ workflow GENOME_ASSEMBLY {
 
         if (!params.skip_reads_length_strategy) {
             SPADES_READS_LENGTH(
-                ch_reads_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
+                ch_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
                 [],
                 []
             )
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_spades_scaffolds_reads_length = SPADES_READS_LENGTH.out.scaffolds
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -275,20 +262,11 @@ workflow GENOME_ASSEMBLY {
     // Megahit needs a tuple with 3 elements as input. I can't use ch_paired_reads directly because R1 and R2 paths there are in a single list element. So I need to map the channel to split R1 and R2 into separate list elements.
     // MEGAHIT: [ meta, reads1, reads2 ]
 
-
-    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    def ch_megahit_contigs_manual = channel.empty()
-    def ch_megahit_contigs_kmergenie = channel.empty()
-    def ch_megahit_contigs_reads_length = channel.empty()
-
     if (!params.skip_megahit) {
 
         if (!params.skip_manual_strategy) {
-            ch_megahit_input_manual = ch_reads_manual_strategy.map { meta, reads -> [meta, reads[0], reads[1]] }
+            ch_megahit_input_manual = ch_manual_strategy.map { meta, reads -> [meta, reads[0], reads[1]] }
             MEGAHIT_MANUAL(ch_megahit_input_manual)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_megahit_contigs_manual = MEGAHIT_MANUAL.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -297,11 +275,8 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_kmergenie_strategy) {
-            ch_megahit_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+            ch_megahit_input_kmergenie = ch_kmergenie_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
             MEGAHIT_KMERGENIE(ch_megahit_input_kmergenie)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_megahit_contigs_kmergenie = MEGAHIT_KMERGENIE.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -310,11 +285,8 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_reads_length_strategy) {
-            ch_megahit_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
+            ch_megahit_input_reads_length = ch_reads_length_strategy.map { meta, reads -> [ meta, reads[0], reads[1] ] }
             MEGAHIT_READS_LENGTH(ch_megahit_input_reads_length)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_megahit_contigs_reads_length = MEGAHIT_READS_LENGTH.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -327,18 +299,10 @@ workflow GENOME_ASSEMBLY {
     // Minia is only run if skip_minia is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with Minia assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
 
-    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    def ch_minia_contigs_manual = channel.empty()
-    def ch_minia_contigs_kmergenie = channel.empty()
-    def ch_minia_contigs_reads_length = channel.empty()
-
     if (!params.skip_minia) {
 
         if (!params.skip_manual_strategy) {
-            MINIA_MANUAL(ch_reads_manual_strategy)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_minia_contigs_manual = MINIA_MANUAL.out.contigs
+            MINIA_MANUAL(ch_manual_strategy)
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -347,10 +311,7 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_kmergenie_strategy) {
-            MINIA_KMERGENIE(ch_reads_kmergenie_strategy)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_minia_contigs_kmergenie = MINIA_KMERGENIE.out.contigs
+            MINIA_KMERGENIE(ch_kmergenie_strategy)
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -359,10 +320,7 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_reads_length_strategy) {
-            MINIA_READS_LENGTH(ch_reads_reads_length_strategy)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_minia_contigs_reads_length = MINIA_READS_LENGTH.out.contigs
+            MINIA_READS_LENGTH(ch_reads_length_strategy)
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -375,19 +333,11 @@ workflow GENOME_ASSEMBLY {
     // ABYSS is only run if skip_abyss is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with ABYSS assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
 
-    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    def ch_abyss_scaffolds_manual = channel.empty()
-    def ch_abyss_scaffolds_kmergenie = channel.empty()
-    def ch_abyss_scaffolds_reads_length = channel.empty()
-
     if (!params.skip_abyss) {
 
         if (!params.skip_manual_strategy) {
-            ch_abyss_input_manual = ch_reads_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
+            ch_abyss_input_manual = ch_manual_strategy.map { meta, reads -> [ meta, reads, [] ] }
             ABYSS_MANUAL(ch_abyss_input_manual, params.abyss_kmer)
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_abyss_scaffolds_manual = ABYSS_MANUAL.out.scaffolds
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -396,13 +346,14 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_kmergenie_strategy) {
-            // Create k-mer channel for ABYSS (needs single kmer value)
-            ch_abyss_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
-            ch_abyss_input_kmergenie = ch_reads_kmergenie_strategy.map { meta, reads -> [ meta, reads, [] ] }
-            ABYSS_KMERGENIE(ch_abyss_input_kmergenie, ch_abyss_kmergenie_single_kmer)
+            // Create k-mer channel for ABYSS (needs single kmer value) using multiMap
+            ch_abyss_kmergenie = ch_kmergenie_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [] ]
+                    single_kmer: meta.single_kmer
+                }
 
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_abyss_scaffolds_kmergenie = ABYSS_KMERGENIE.out.scaffolds
+            ABYSS_KMERGENIE(ch_abyss_kmergenie.input, ch_abyss_kmergenie.single_kmer)
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -411,13 +362,14 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_reads_length_strategy) {
-            // Create k-mer channel for ABYSS (needs single kmer value)
-            ch_abyss_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
-            ch_abyss_input_reads_length = ch_reads_reads_length_strategy.map { meta, reads -> [ meta, reads, [] ] }
-            ABYSS_READS_LENGTH(ch_abyss_input_reads_length, ch_abyss_reads_length_single_kmer)
+            // Create k-mer channel for ABYSS (needs single kmer value) using multiMap
+            ch_abyss_reads_length = ch_reads_length_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [] ]
+                    single_kmer: meta.single_kmer
+                }
 
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_abyss_scaffolds_reads_length = ABYSS_READS_LENGTH.out.scaffolds
+            ABYSS_READS_LENGTH(ch_abyss_reads_length.input, ch_abyss_reads_length.single_kmer)
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -431,27 +383,15 @@ workflow GENOME_ASSEMBLY {
     // The channel with SPARSEASSEMBLER assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
     // SPARSEASSEMBLER is a special case because it can output contigs or scaffolds depending on the parameters used and quality of the reads
 
-    // Initialise channels for outputs as empty to avoid use of conditionals in emit section.
-    def ch_sparseassembler_scaffolds_manual = channel.empty()
-    def ch_sparseassembler_contigs_manual = channel.empty()
-    def ch_sparseassembler_scaffolds_kmergenie = channel.empty()
-    def ch_sparseassembler_contigs_kmergenie = channel.empty()
-    def ch_sparseassembler_scaffolds_reads_length = channel.empty()
-    def ch_sparseassembler_contigs_reads_length = channel.empty()
-
     if (!params.skip_sparseassembler) {
 
         if (!params.skip_manual_strategy) {
             SPARSEASSEMBLER_MANUAL(
-                ch_reads_manual_strategy,
+                ch_manual_strategy,
                 params.sparseassembler_kmer,
                 params.sparseassembler_genome_size,
                 params.sparseassembler_expected_coverage
             )
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_sparseassembler_scaffolds_manual = SPARSEASSEMBLER_MANUAL.out.scaffolds
-            ch_sparseassembler_contigs_manual = SPARSEASSEMBLER_MANUAL.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -463,18 +403,19 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_kmergenie_strategy) {
-            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
-            ch_sparseassembler_kmergenie_single_kmer = ch_reads_kmergenie_strategy.map { meta, reads -> meta.single_kmer }
+            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value) using multiMap
+            ch_sparseassembler_kmergenie = ch_kmergenie_strategy
+                .multiMap { meta, reads ->
+                    input:       [ meta, reads ]
+                    single_kmer: meta.single_kmer
+                }
+
             SPARSEASSEMBLER_KMERGENIE(
-                ch_reads_kmergenie_strategy,
-                ch_sparseassembler_kmergenie_single_kmer,
+                ch_sparseassembler_kmergenie.input,
+                ch_sparseassembler_kmergenie.single_kmer,
                 params.sparseassembler_genome_size,
                 params.sparseassembler_expected_coverage
             )
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_sparseassembler_scaffolds_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.scaffolds
-            ch_sparseassembler_contigs_kmergenie = SPARSEASSEMBLER_KMERGENIE.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -486,18 +427,19 @@ workflow GENOME_ASSEMBLY {
         }
 
         if (!params.skip_reads_length_strategy) {
-            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value)
-            ch_sparseassembler_reads_length_single_kmer = ch_reads_reads_length_strategy.map { meta, reads -> meta.single_kmer }
+            // Create k-mer channel for SPARSEASSEMBLER (needs single kmer value) using multiMap
+            ch_sparseassembler_reads_length = ch_reads_length_strategy
+                .multiMap { meta, reads ->
+                    input:       [ meta, reads ]
+                    single_kmer: meta.single_kmer
+                }
+
             SPARSEASSEMBLER_READS_LENGTH(
-                ch_reads_reads_length_strategy,
-                ch_sparseassembler_reads_length_single_kmer,
+                ch_sparseassembler_reads_length.input,
+                ch_sparseassembler_reads_length.single_kmer,
                 params.sparseassembler_genome_size,
                 params.sparseassembler_expected_coverage
             )
-
-            // Capture output for emits (avoids using conditionals in emits section)
-            ch_sparseassembler_scaffolds_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.scaffolds
-            ch_sparseassembler_contigs_reads_length = SPARSEASSEMBLER_READS_LENGTH.out.contigs
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -595,34 +537,6 @@ workflow GENOME_ASSEMBLY {
     getseqkitk_kmer                             = ch_getseqkitk_kmer
     kmergenie_html                              = ch_kmergenie_html
     getkmergeniek_k                             = ch_getkmergeniek_k
-
-    // SPAdes outputs
-    spades_scaffolds_manual                     = ch_spades_scaffolds_manual
-    spades_scaffolds_kmergenie                  = ch_spades_scaffolds_kmergenie
-    spades_scaffolds_reads_length               = ch_spades_scaffolds_reads_length
-
-    // MEGAHIT outputs
-    megahit_contigs_manual                      = ch_megahit_contigs_manual
-    megahit_contigs_kmergenie                   = ch_megahit_contigs_kmergenie
-    megahit_contigs_reads_length                = ch_megahit_contigs_reads_length
-
-    // Minia outputs
-    minia_contigs_manual                        = ch_minia_contigs_manual
-    minia_contigs_kmergenie                     = ch_minia_contigs_kmergenie
-    minia_contigs_reads_length                  = ch_minia_contigs_reads_length
-
-    // ABySS outputs
-    abyss_scaffolds_manual                      = ch_abyss_scaffolds_manual
-    abyss_scaffolds_kmergenie                   = ch_abyss_scaffolds_kmergenie
-    abyss_scaffolds_reads_length                = ch_abyss_scaffolds_reads_length
-
-    // SparseAssembler outputs
-    sparseassembler_scaffolds_manual            = ch_sparseassembler_scaffolds_manual
-    sparseassembler_contigs_manual              = ch_sparseassembler_contigs_manual
-    sparseassembler_scaffolds_kmergenie         = ch_sparseassembler_scaffolds_kmergenie
-    sparseassembler_contigs_kmergenie           = ch_sparseassembler_contigs_kmergenie
-    sparseassembler_scaffolds_reads_length      = ch_sparseassembler_scaffolds_reads_length
-    sparseassembler_contigs_reads_length        = ch_sparseassembler_contigs_reads_length
 
     // Downstream outputs (unconditional processes)
     renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
