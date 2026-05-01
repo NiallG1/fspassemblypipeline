@@ -42,9 +42,9 @@ workflow GENOME_ASSEMBLY {
 
 // ==================== K-mer strategies for genome assembly =======================
 
-    def ch_reads_manual_strategy = Channel.empty()
-    def ch_reads_kmergenie_strategy = Channel.empty()
-    def ch_reads_reads_length_strategy = Channel.empty()
+    def ch_reads_manual_strategy = channel.empty()
+    def ch_reads_kmergenie_strategy = channel.empty()
+    def ch_reads_reads_length_strategy = channel.empty()
 
     // Channel 1: Manual strategy (uses config values)
     if (!params.skip_manual_strategy) {
