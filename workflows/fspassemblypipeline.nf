@@ -42,9 +42,15 @@ workflow FSPASSEMBLYPIPELINE {
         ch_samplesheet.raw
     )
 
+    ch_samplesheet_raw = PREPROCESSING.out.fastp_reads
+        .branch { meta, reads ->
+            def ranks = (meta.family || meta.order || meta.class || meta.phylum)
+            taxonomy: ranks // Run assembly if taxonomy information is given
+            no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
+        }
 
     GENOME_ASSEMBLY (
-        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+        ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
     )
 
 
@@ -56,7 +62,7 @@ workflow FSPASSEMBLYPIPELINE {
     //
     // Collate and save software versions
     //
-    def topic_versions = Channel.topic("versions")
+    def topic_versions = channel.topic("versions")
         .distinct()
         .branch { entry ->
             versions_file: entry instanceof Path
