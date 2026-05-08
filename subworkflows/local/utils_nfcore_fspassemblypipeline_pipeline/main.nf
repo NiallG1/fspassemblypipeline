@@ -177,6 +177,18 @@ workflow PIPELINE_COMPLETION {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Add assembler name to meta.id for all assemblies to avoid conflicts in downstream processes that use meta.id for naming outputs (e.g. busco, quast, merquryfk)
+def createAssemblyMeta (meta, assembly, assembler) {
+    def strategy = meta.kmer_strategy
+    def reads_type = meta.reads_type
+    def new_meta = meta + [
+        assembly_id: "${meta.id}_${reads_type}_${assembler}_${strategy}",
+        assembler: assembler,
+        id: meta.id
+    ]
+    return [new_meta, assembly, "${meta.id}_${reads_type}_${strategy}_${assembler}.fa"]
+}
+
 //
 // Validate channels from input samplesheet
 //

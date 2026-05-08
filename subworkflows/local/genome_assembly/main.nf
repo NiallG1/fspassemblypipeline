@@ -24,6 +24,7 @@ include { BUSCO_BUSCO                                      } from '../../../modu
 include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
 include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
 include { QUAST                                            } from '../../../modules/nf-core/quast/main'
+include {createAssemblyMeta                                } from '../utils_nfcore_fspassemblypipeline_pipeline/main'
 
 workflow GENOME_ASSEMBLY {
 
@@ -189,18 +190,6 @@ workflow GENOME_ASSEMBLY {
 
 
 // =================== Genome assembly with different assemblers and k-mer strategies =======================
-
-    // Add assembler name to meta.id for all assemblies to avoid conflicts in downstream processes that use meta.id for naming outputs (e.g. busco, quast, merquryfk)
-    def createAssemblyMeta = { meta, assembly, assembler ->
-        def strategy = meta.kmer_strategy
-        def reads_type = meta.reads_type
-        def new_meta = meta + [
-            assembly_id: "${meta.id}_${reads_type}_${assembler}_${strategy}",
-            assembler: assembler,
-            id: meta.id
-        ]
-        return [new_meta, assembly, "${meta.id}_${reads_type}_${strategy}_${assembler}.fa"]
-    }
 
     // Create channel with new meta for downstream processes (after assembly). This channel combines all assemblies from different assemblers and strategies, and maps them to the new meta with updated id.
     def ch_draft_assemblies_input = channel.empty()

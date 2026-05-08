@@ -1,0 +1,3 @@
+sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum
+sim_Com_5_10k_cov60,./assets/dataset/tested/sim_Com_5_10k_cov60/sim_Com_5_10k_cov60_R1.fastp.fastq.gz,./assets/dataset/tested/sim_Com_5_10k_cov60/sim_Com_5_10k_cov60_R2.fastp.fastq.gz,raw,,,Hydnaceae,,,Basidiomycota
+sim_Com_5_100k_cov40,./assets/dataset/tested/sim_Com_5_100k_cov40/sim_Com_5_100k_cov40_R1.fastp.fastq.gz,./assets/dataset/tested/sim_Com_5_100k_cov40/sim_Com_5_100k_cov40_R2.fastp.fastq.gz,raw,,,Trichocomaceae,Eurotiales,Eurotiomycetes,Ascomycota
