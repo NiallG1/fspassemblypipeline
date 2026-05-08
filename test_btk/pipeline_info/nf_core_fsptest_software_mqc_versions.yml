@@ -1,0 +1,7 @@
+BLOBTOOLKIT_CREATEBLOBDIR:
+  blobtoolkit: 4.4.6
+TIARA_TIARA:
+  tiara: 1.0.3
+Workflow:
+    nf-core/fspassemblypipeline: v1.0.0dev
+    Nextflow: 25.10.4
