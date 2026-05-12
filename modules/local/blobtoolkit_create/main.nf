@@ -4,10 +4,10 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
 
     
     conda "${moduleDir}/environment.yml"
-    container "docker.io/genomehubs/blobtoolkit:4.4.6"
+    container "docker.io/genomehubs/blobtoolkit:latest"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(busco) //add fasta
+    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco) //add fasta
     //tuple val(meta), path(bam)  // add bam file
     //tuple val(meta), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
     //tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
@@ -32,6 +32,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     """
     blobtools create \\
         --fasta ${fasta} \\
+        --meta ${yaml} \\
         --threads ${task.cpus} \\
         --cov ${bam} \\
         $args \\

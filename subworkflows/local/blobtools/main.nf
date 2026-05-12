@@ -1,5 +1,6 @@
 include { BLOBTK_PLOT               } from '../../../modules/nf-core/blobtk/plot/main'
 include { BLOBTOOLKIT_CREATEBLOBDIR } from '../../../modules/local/blobtoolkit_create/main'
+include { CREATE_PROJECT_YAML       } from '../../../modules/local/createyml/main'
 
 
 workflow BLOBTOOLS {
@@ -12,26 +13,48 @@ workflow BLOBTOOLS {
         // Create a channel from the BUSCO file path in config
         ch_busco = Channel.fromPath(params.busco_file)
     
-        ch_btk = ch_samplesheet
-        .map { meta, files ->
-            tuple(
-                [id: meta.id],      // Create new meta with just id
-                files[0],         // First file in the list is the fasta
-                files[1]            // Second file in the list is the bam
-
-            )
+        // Create YAML files from samplesheet metadata
+        ch_yaml_input = ch_samplesheet
+            .map { meta, files ->
+                tuple(meta, files[0])  // meta and fasta file
+            }
+        
+        CREATE_PROJECT_YAML(ch_yaml_input)
+        
+        // Debug: Check what YAML output looks like
+        CREATE_PROJECT_YAML.out.yaml.view { meta, yaml -> 
+            "YAML created: ${meta.id} -> ${yaml}"
         }
-        .combine(ch_busco)
 
-    //
-    // Create Blobtools dataset files
-    //
-    BLOBTOOLKIT_CREATEBLOBDIR(ch_btk)
-    //ch_versions = ch_versions.mix ( BLOBTOOLKIT_CREATEBLOBDIR.out.versions.first() )-think this version control is outdated
+        // Prepare channels for joining
+        ch_samplesheet_keyed = ch_samplesheet
+            .map { meta, files ->
+                tuple(meta.id, meta, files[0], files[1])
+            }
+            .view { "Samplesheet keyed: ${it}" }
+        
+        ch_yaml_keyed = CREATE_PROJECT_YAML.out.yaml
+            .map { meta, yaml -> 
+                tuple(meta.id, yaml)
+            }
+            .view { "YAML keyed: ${it}" }
 
+        // Join and combine
+        ch_btk = ch_samplesheet_keyed
+            .join(ch_yaml_keyed)
+            .view { "After join: ${it}" }
+            .combine(ch_busco)
+            .view { "After combine: ${it}" }
+            .map { id, meta, fasta, bam, yaml, busco ->
+                tuple(meta, fasta, bam, yaml, busco)
+            }
+            .view { "Final input to BLOBTOOLKIT: ${it}" }
 
+        //
+        // Create Blobtools dataset files
+        //
+        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk)
 
     emit:
     blobdir  = BLOBTOOLKIT_CREATEBLOBDIR.out.blobdir
-    //versions = ch_versions                            // channel: [ versions.yml ]
 }
