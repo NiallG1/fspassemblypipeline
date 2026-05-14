@@ -22,6 +22,11 @@ workflow FSPASSEMBLYPIPELINE {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+    multiqc_config
+    multiqc_logo
+    multiqc_methods_description
+    outdir
+
     main:
 
     ch_versions = channel.empty()
@@ -81,15 +86,14 @@ workflow FSPASSEMBLYPIPELINE {
 
     def ch_versions_files = ch_versions.filter { it instanceof Path }
 
-    softwareVersionsToYAML(ch_versions_files.mix(topic_versions.versions_file))
+    ch_collated_versions = softwareVersionsToYAML(ch_versions_files.mix(topic_versions.versions_file))
         .mix(topic_versions_string)
         .collectFile(
             storeDir: "${params.outdir}/pipeline_info",
             name: 'nf_core_'  +  'fsptest_software_'  + 'mqc_'  + 'versions.yml',
             sort: true,
             newLine: true
-        ).set { ch_collated_versions }
-
+        )
 
     //
     // MODULE: MultiQC
