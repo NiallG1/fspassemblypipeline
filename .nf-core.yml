@@ -2,13 +2,20 @@ lint:
   files_exist:
     - conf/igenomes.config
     - conf/igenomes_ignored.config
-nf_core_version: 3.5.2
+  files_unchanged:
+    - assets/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_dark.png
+    - .gitignore
+  template_strings:
+    - assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/samtools_pypolca/EGP017_25_B2_336_best_assembly_pypolca_sorted.bam
+nf_core_version: 4.0.2
 repository_type: pipeline
 template:
-  author: Lia Obinu, Niall Garvey, Wu Huang
+  author: Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos
   description: Genome assembly pipeline for the Fungarium Sequencing Project, designed
-    to process and assemble genomic data from fungal species, enabling high-quality
-    reference genomes for research and biodiversity studies.
+    to process and assemble genomes from Illumina short reads to be used for research
+    and biodiversity studies.
   force: false
   is_nfcore: true
   name: fspassemblypipeline
