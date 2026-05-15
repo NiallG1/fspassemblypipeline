@@ -1,6 +1,5 @@
 include { SEQKIT_STATS                                     } from '../../../modules/nf-core/seqkit/stats/main'
 include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
-// include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
 include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
 include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
@@ -517,24 +516,10 @@ workflow GENOME_ASSEMBLY {
     QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
 
     emit:
-    // Fastk outputs (unconditional processes, it's needed as input for merquryfk)
-    fastk_ktab                                  = FASTK_FASTK.out.ktab
-    fastk_hist                                  = FASTK_FASTK.out.hist
-
-    // K-mer strategy outputs
+    // K-mer strategy outputs - might be useful to collect results downstream
     seqkit_stats                                = ch_seqkit_stats
     getseqkitk_kmer                             = ch_getseqkitk_kmer
-    kmergenie_html                              = ch_kmergenie_html
     getkmergeniek_k                             = ch_getkmergeniek_k
-
-    // Downstream outputs (unconditional processes)
-    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
-    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary
-    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt
-    busco_full_table                            = BUSCO_BUSCO.out.full_table
-    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary
-    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt
-    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
-    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
-    quast_results                               = QUAST.out.results
+    // Assemblies - all assemblers and strategies mixed into one channel
+    draft_assemblies = ch_draft_assemblies_input
 }
