@@ -240,7 +240,7 @@ workflow GENOME_ASSEMBLY_MERGED {
     // ======= Megahit assemblies - nested conditionals (assembler × strategy) ======
     // Megahit is only run if skip_megahit is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with Megahit assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
-    // Megahit needs a tuple with 3 elements as input. 
+    // Megahit needs a tuple with 3 elements as input.
     // MEGAHIT: [ meta, reads, []]
 
     if (!params.skip_megahit) {
