@@ -1,7 +1,6 @@
 include { BLOBTK_PLOT               } from '../../../modules/nf-core/blobtk/plot/main'
-include { BLOBTOOLKIT_CREATEBLOBDIR } from '../../../modules/local/blobtoolkit_create/main'
 include { CREATE_PROJECT_YAML       } from '../../../modules/local/createyml/main'
-
+include { BLOBTK_CREATE             } from '../../../modules/nf-core/blobtk/create/main'
 
 workflow BLOBTOOLS {
 
@@ -18,6 +17,9 @@ workflow BLOBTOOLS {
             .map { meta, files ->
                 tuple(meta, files[0])  // meta and fasta file
             }
+
+        // Create taxdump channel only if path is provided
+        ch_taxdump = params.taxdump ? Channel.fromPath(params.taxdump) : Channel.empty()
         
         CREATE_PROJECT_YAML(ch_yaml_input)
         
@@ -44,17 +46,19 @@ workflow BLOBTOOLS {
             .join(ch_yaml_keyed)
             .view { "After join: ${it}" }
             .combine(ch_busco)
-            .view { "After combine: ${it}" }
-            .map { id, meta, fasta, bam, yaml, busco ->
-                tuple(meta, fasta, bam, yaml, busco)
+            .view { "After combine with busco: ${it}" }
+            .combine(ch_taxdump)
+            .view { "After combine with taxdump: ${it}" }
+            .map { id, meta, fasta, bam, yaml, full_table, taxdump ->
+                tuple(meta, fasta, full_table)
             }
             .view { "Final input to BLOBTOOLKIT: ${it}" }
 
         //
         // Create Blobtools dataset files
         //
-        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk)
+        BLOBTK_CREATE(ch_btk)
 
     emit:
-    blobdir  = BLOBTOOLKIT_CREATEBLOBDIR.out.blobdir
+    blobdir  = BLOBTK_CREATE.out.blobdir
 }

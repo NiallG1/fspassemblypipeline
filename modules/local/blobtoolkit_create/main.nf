@@ -7,10 +7,8 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     container "docker.io/genomehubs/blobtoolkit:latest"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco) //add fasta
-    //tuple val(meta), path(bam)  // add bam file
-    //tuple val(meta), path(busco, stageAs: 'lineage??/*') //add busco, why stageas?
-    //tuple val(meta3), path(yaml) // will need to create a yaml somewhere?
+    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(taxdump)
+    
     
     output:
     tuple val(meta), path(prefix), emit: blobdir
@@ -30,7 +28,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     
    
     """
-    blobtools create \\
+    blobtools replace \\
         --fasta ${fasta} \\
         --meta ${yaml} \\
         --threads ${task.cpus} \\
