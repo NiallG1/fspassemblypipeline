@@ -62,7 +62,7 @@ workflow FSPASSEMBLYPIPELINE {
 
     CONTAMINATION_DETECTION(
     ch_samplesheet.bam)
-    
+
     BLOBTOOLS(
     ch_samplesheet.bam)     // Channel: [meta, fasta, bam]
 

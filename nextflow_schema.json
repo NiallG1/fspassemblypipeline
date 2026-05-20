@@ -381,7 +381,8 @@
             "default": "odb12"
         },
         "lineages_list_file": {
-            "type": "string"
+            "type": "string",
+            "default": "./assets/fungi_busco_lineages.txt"
         },
         "skip_manual_strategy": {
             "type": "boolean"
@@ -406,6 +407,14 @@
         },
         "skip_sparseassembler": {
             "type": "boolean"
+        },
+        "busco_file": {
+            "type": "string",
+            "default": "/home/nga10kg/FSP/fspassemblypipeline/assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/busco_specific_pypolca/EGP017_25_B2_336_best_assembly_full_table.tsv"
+        },
+        "taxdump": {
+            "type": "string",
+            "default": "/home/nga10kg/FSP/taxdump"
         }
     }
 }

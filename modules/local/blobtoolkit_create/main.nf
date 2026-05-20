@@ -2,14 +2,14 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     tag "$meta.id"
     label 'process_medium'
 
-    
+
     conda "${moduleDir}/environment.yml"
     container "docker.io/genomehubs/blobtoolkit:latest"
 
     input:
     tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(taxdump)
-    
-    
+
+
     output:
     tuple val(meta), path(prefix), emit: blobdir
     tuple val("${task.process}"), val('blobtoolkit'), eval("btk --version | cut -d' ' -f2 | sed 's/v//'"), topic: versions, emit: versions_blobtoolkit
@@ -25,8 +25,8 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     def args = task.ext.args ?: ''
     prefix = task.ext.prefix ?: "${meta.id}"
     //def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
-    
-   
+
+
     """
     blobtools replace \\
         --fasta ${fasta} \\
@@ -37,13 +37,13 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
         ${prefix}
 
     """
-   
+
     stub:
     def args = task.ext.args ?: ''
-  
+
     """
     echo $args
-    
+
     touch ${prefix}.bam
     """
 }

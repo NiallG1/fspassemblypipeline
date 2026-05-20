@@ -5,13 +5,13 @@ include { BLOBTK_CREATE             } from '../../../modules/nf-core/blobtk/crea
 workflow BLOBTOOLS {
 
     take:
-    ch_samplesheet 
-   
+    ch_samplesheet
+
     main:
 
         // Create a channel from the BUSCO file path in config
         ch_busco = Channel.fromPath(params.busco_file)
-    
+
         // Create YAML files from samplesheet metadata
         ch_yaml_input = ch_samplesheet
             .map { meta, files ->
@@ -20,11 +20,11 @@ workflow BLOBTOOLS {
 
         // Create taxdump channel only if path is provided
         ch_taxdump = params.taxdump ? Channel.fromPath(params.taxdump) : Channel.empty()
-        
+
         CREATE_PROJECT_YAML(ch_yaml_input)
-        
+
         // Debug: Check what YAML output looks like
-        CREATE_PROJECT_YAML.out.yaml.view { meta, yaml -> 
+        CREATE_PROJECT_YAML.out.yaml.view { meta, yaml ->
             "YAML created: ${meta.id} -> ${yaml}"
         }
 
@@ -34,9 +34,9 @@ workflow BLOBTOOLS {
                 tuple(meta.id, meta, files[0], files[1])
             }
             .view { "Samplesheet keyed: ${it}" }
-        
+
         ch_yaml_keyed = CREATE_PROJECT_YAML.out.yaml
-            .map { meta, yaml -> 
+            .map { meta, yaml ->
                 tuple(meta.id, yaml)
             }
             .view { "YAML keyed: ${it}" }

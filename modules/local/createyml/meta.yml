@@ -3,61 +3,61 @@
 name: "createyml"
 description: write your description here
 keywords:
-- sort
-- example
-- genomics
+  - sort
+  - example
+  - genomics
 tools:
-## TODO nf-core: Add a description and other details for the software below
-- "createyml":
-    description: ""
-    homepage: ""
-    documentation: ""
-    tool_dev_url: ""
-    doi: ""
-    licence: null
-    identifier: null
+  ## TODO nf-core: Add a description and other details for the software below
+  - "createyml":
+      description: ""
+      homepage: ""
+      documentation: ""
+      tool_dev_url: ""
+      doi: ""
+      licence: null
+      identifier: null
 
 input:
-- bam:
-    type: file
-    description: Sorted BAM/CRAM/SAM file
-    pattern: '*.{bam,cram,sam}'
-    ontologies:
-    - edam: http://edamontology.org/format_2572  # BAM
-    - edam: http://edamontology.org/format_2573  # CRAM
-    - edam: http://edamontology.org/format_3462  # SAM
-output:
-  bam:
-  - '*.bam':
+  - bam:
       type: file
       description: Sorted BAM/CRAM/SAM file
-      pattern: '*.{bam,cram,sam}'
+      pattern: "*.{bam,cram,sam}"
       ontologies:
-      - edam: http://edamontology.org/format_2572  # BAM
-      - edam: http://edamontology.org/format_2573  # CRAM
-      - edam: http://edamontology.org/format_3462  # SAM
+        - edam: http://edamontology.org/format_2572 # BAM
+        - edam: http://edamontology.org/format_2573 # CRAM
+        - edam: http://edamontology.org/format_3462 # SAM
+output:
+  bam:
+    - "*.bam":
+        type: file
+        description: Sorted BAM/CRAM/SAM file
+        pattern: "*.{bam,cram,sam}"
+        ontologies:
+          - edam: http://edamontology.org/format_2572 # BAM
+          - edam: http://edamontology.org/format_2573 # CRAM
+          - edam: http://edamontology.org/format_3462 # SAM
   versions_createyml:
-  - - ${task.process}:
-        type: string
-        description: The name of the process
-    - createyml:
-        type: string
-        description: The name of the tool
-    - createyml --version:
-        type: eval
-        description: The expression to obtain the version of the tool
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - createyml:
+          type: string
+          description: The name of the tool
+      - createyml --version:
+          type: eval
+          description: The expression to obtain the version of the tool
 topics:
   versions:
-  - - ${task.process}:
-        type: string
-        description: The name of the process
-    - createyml:
-        type: string
-        description: The name of the tool
-    - createyml --version:
-        type: eval
-        description: The expression to obtain the version of the tool
+    - - ${task.process}:
+          type: string
+          description: The name of the process
+      - createyml:
+          type: string
+          description: The name of the tool
+      - createyml --version:
+          type: eval
+          description: The expression to obtain the version of the tool
 authors:
-- "@NiallG1"
+  - "@NiallG1"
 maintainers:
-- "@NiallG1"
+  - "@NiallG1"
