@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/fspassemblypipeline/master/nextflow_schema.json",
     "title": "nf-core/fspassemblypipeline pipeline parameters",
-    "description": "Genome assembly pipeline for the Fungarium Sequencing Project, designed to process and assemble genomic data from fungal species, enabling high-quality reference genomes for research and biodiversity studies.",
+    "description": "Genome assembly pipeline for the Fungarium Sequencing Project, designed to process and assemble genomes from Illumina short reads to be used for research and biodiversity studies.",
     "type": "object",
     "$defs": {
         "input_output_options": {
@@ -141,13 +141,6 @@
                     "fa_icon": "fas fa-palette",
                     "hidden": true
                 },
-                "hook_url": {
-                    "type": "string",
-                    "description": "Incoming hook URL for messaging service",
-                    "fa_icon": "fas fa-people-group",
-                    "help_text": "Incoming hook URL for messaging service. Currently, MS Teams and Slack are supported.",
-                    "hidden": true
-                },
                 "multiqc_config": {
                     "type": "string",
                     "format": "file-path",
@@ -265,8 +258,7 @@
             "type": ["string", "null"]
         },
         "fastp_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "fastk_kmer": {
             "type": "integer",
@@ -285,16 +277,14 @@
             "default": true
         },
         "fastk_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "histex_g_output": {
             "type": "boolean",
             "default": true
         },
         "histex_extra_args": {
-            "type": ["string", "null"],
-            "default": null
+            "type": ["string", "null"]
         },
         "spades_kmer_list": {
             "type": "string",
@@ -312,12 +302,12 @@
             "type": "string",
             "default": "--no-mercy --min-count 3"
         },
+        "minia_extra_args": {
+            "type": "string"
+        },
         "minia_kmer": {
             "type": "integer",
             "default": 21
-        },
-        "minia_extra_args": {
-            "type": "string"
         },
         "busco_mode": {
             "type": "string",
@@ -391,12 +381,31 @@
             "default": "odb12"
         },
         "lineages_list_file": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/fspassemblypipeline/assets/fungi_busco_lineages.txt"
+            "type": "string"
         },
-        "busco_file": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/fspassemblypipeline/assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/busco_specific_pypolca/EGP017_25_B2_336_best_assembly_full_table.tsv"
+        "skip_manual_strategy": {
+            "type": "boolean"
+        },
+        "skip_kmergenie_strategy": {
+            "type": "boolean"
+        },
+        "skip_reads_length_strategy": {
+            "type": "boolean"
+        },
+        "skip_spades": {
+            "type": "boolean"
+        },
+        "skip_megahit": {
+            "type": "boolean"
+        },
+        "skip_minia": {
+            "type": "boolean"
+        },
+        "skip_abyss": {
+            "type": "boolean"
+        },
+        "skip_sparseassembler": {
+            "type": "boolean"
         }
     }
 }

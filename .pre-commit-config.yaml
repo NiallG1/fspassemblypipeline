@@ -4,7 +4,7 @@ repos:
     hooks:
       - id: prettier
         additional_dependencies:
-          - prettier@3.6.2
+          - prettier@3.8.3
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -13,8 +13,8 @@ repos:
         exclude: |
           (?x)^(
               .*ro-crate-metadata.json$|
-              modules/nf-core/.*|
-              subworkflows/nf-core/.*|
+              modules/(?!local/).*|
+              subworkflows/(?!local/).*|
               .*\.snap$ |
               assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/busco_specific_pypolca/EGP017_25_B2_336_best_assembly_full_table\.tsv
           )$
@@ -22,8 +22,14 @@ repos:
         exclude: |
           (?x)^(
               .*ro-crate-metadata.json$|
-              modules/nf-core/.*|
-              subworkflows/nf-core/.*|
+              modules/(?!local/).*|
+              subworkflows/(?!local/).*|
               .*\.snap$ |
               assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/busco_specific_pypolca/EGP017_25_B2_336_best_assembly_full_table\.tsv
           )$
+  - repo: https://github.com/seqeralabs/nf-lint-pre-commit
+    rev: v0.3.0
+    hooks:
+      - id: nextflow-lint
+        files: '\.nf$|nextflow\.config$'
+        args: ["-output", "json"]

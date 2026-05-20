@@ -23,6 +23,11 @@ workflow FSPASSEMBLYPIPELINE {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input
+    multiqc_config
+    multiqc_logo
+    multiqc_methods_description
+    outdir
+
     main:
 
     ch_versions = channel.empty()
@@ -43,9 +48,15 @@ workflow FSPASSEMBLYPIPELINE {
         ch_samplesheet.raw
     )
 
+    ch_samplesheet_raw = PREPROCESSING.out.fastp_reads
+        .branch { meta, reads ->
+            def ranks = (meta.family || meta.order || meta.class || meta.phylum)
+            taxonomy: ranks // Run assembly if taxonomy information is given
+            no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
+        }
 
     GENOME_ASSEMBLY (
-        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+        ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
     )
 
 
@@ -60,7 +71,7 @@ workflow FSPASSEMBLYPIPELINE {
     //
     // Collate and save software versions
     //
-    def topic_versions = Channel.topic("versions")
+    def topic_versions = channel.topic("versions")
         .distinct()
         .branch { entry ->
             versions_file: entry instanceof Path
@@ -79,15 +90,14 @@ workflow FSPASSEMBLYPIPELINE {
 
     def ch_versions_files = ch_versions.filter { it instanceof Path }
 
-    softwareVersionsToYAML(ch_versions_files.mix(topic_versions.versions_file))
+    ch_collated_versions = softwareVersionsToYAML(ch_versions_files.mix(topic_versions.versions_file))
         .mix(topic_versions_string)
         .collectFile(
             storeDir: "${params.outdir}/pipeline_info",
             name: 'nf_core_'  +  'fsptest_software_'  + 'mqc_'  + 'versions.yml',
             sort: true,
             newLine: true
-        ).set { ch_collated_versions }
-
+        )
 
     //
     // MODULE: MultiQC
