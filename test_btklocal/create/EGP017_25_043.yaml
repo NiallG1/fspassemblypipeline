@@ -1,0 +1,7 @@
+record_type: contig
+assembly:
+  accession: EGP017_25_043
+  prefix: EGP017_25_043
+taxon:
+  name: Unknown species
+  taxid: 2772220

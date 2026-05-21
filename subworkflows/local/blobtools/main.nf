@@ -1,6 +1,8 @@
 include { BLOBTK_PLOT               } from '../../../modules/nf-core/blobtk/plot/main'
 include { CREATE_PROJECT_YAML       } from '../../../modules/local/createyml/main'
+include { BLOBTOOLKIT_CREATEBLOBDIR } from '../../../modules/local/blobtoolkit_create/main'
 include { BLOBTK_CREATE             } from '../../../modules/nf-core/blobtk/create/main'
+
 
 workflow BLOBTOOLS {
 
@@ -49,16 +51,16 @@ workflow BLOBTOOLS {
             .view { "After combine with busco: ${it}" }
             .combine(ch_taxdump)
             .view { "After combine with taxdump: ${it}" }
-            .map { id, meta, fasta, bam, yaml, full_table, taxdump ->
-                tuple(meta, fasta, full_table)
+            .map { id, meta, fasta, bam, yaml, busco, taxdump ->
+                tuple(meta, fasta, bam, yaml, busco, taxdump)
             }
             .view { "Final input to BLOBTOOLKIT: ${it}" }
 
         //
         // Create Blobtools dataset files
         //
-        BLOBTK_CREATE(ch_btk)
+        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk)
 
     emit:
-    blobdir  = BLOBTK_CREATE.out.blobdir
+    blobdir  = BLOBTOOLKIT_CREATEBLOBDIR.out.blobdir
 }

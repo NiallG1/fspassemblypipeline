@@ -1,0 +1,2 @@
+##[["FCS genome report", 2, 1], {"git-rev": "v0.5.5-9-gfc836c1", "run-date": "Thu May 21 12:09:27 2026", "db": {"build-date": "2022-11-03", "seqs": 3042, "Gbp": 0.28336}, "run-info": {"agg-cvg": 0.00147527, "asserted-div": "fung:basidiomycetes", "inferred-primary-divs": ["prok:CFB group bacteria"], "corrected-primary-divs": ["fung:basidiomycetes"], "genome-hash": "e795b00403982284"}}]
+#seq_id	start_pos	end_pos	seq_len	action	div	agg_cont_cov	top_tax_name
