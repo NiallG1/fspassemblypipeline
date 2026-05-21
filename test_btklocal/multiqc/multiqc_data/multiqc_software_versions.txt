@@ -1,8 +1,0 @@
-Sample	blobtoolkit	comparison	convertfcsrpt	createyml	fcsgx	tiara	nf-core/fspassemblypipeline	Nextflow
-BLOBTOOLKIT_CREATEBLOBDIR	4.5.3							
-COMPARISON		4.5.2						
-CONVERTFCSRPT			8.25					
-CREATE_PROJECT_YAML				3.11.10				
-FCSGX_RUNGX					0.5.5			
-TIARA_TIARA						1.0.3		
-Workflow							v1.0.0dev	26.04.0
