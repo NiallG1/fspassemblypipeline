@@ -26,10 +26,10 @@ process CREATE_PROJECT_YAML {
     def record_type = meta.record_type ?: "contig"
     """
     cat > ${meta.id}.yaml <<EOF
-record_type: ${record_type}
 assembly:
   accession: ${accession}
   prefix: ${prefix}
+  record_type: ${record_type}
 taxon:
   name: ${species}
   taxid: ${taxon_id}
@@ -44,10 +44,10 @@ EOF
     def record_type = meta.record_type ?: "contig"
     """
     cat > ${meta.id}.yaml <<EOF
-record_type: ${record_type}
 assembly:
   accession: ${accession}
   prefix: ${prefix}
+  record_type: ${record_type}
 taxon:
   name: ${species}
   taxid: ${taxon_id}
