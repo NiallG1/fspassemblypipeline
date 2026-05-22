@@ -456,5 +456,5 @@ workflow GENOME_ASSEMBLY_MERGED {
     getseqkitk_kmer                             = ch_getseqkitk_kmer
     getkmergeniek_k                             = ch_getkmergeniek_k
     // Assemblies - all assemblers and strategies mixed into one channel
-    draft_assemblies = ch_draft_assemblies_input
+    draft_assemblies_merged = ch_draft_assemblies_input
 }
