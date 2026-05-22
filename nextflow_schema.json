@@ -406,6 +406,14 @@
         },
         "skip_sparseassembler": {
             "type": "boolean"
+        },
+        "use_paired_reads": {
+            "type": "boolean",
+            "default": true
+        },
+        "use_merged_reads": {
+            "type": "boolean",
+            "default": true
         }
     }
 }

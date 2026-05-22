@@ -5,6 +5,7 @@
 */
 
 include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
+include { GENOME_ASSEMBLY_MERGED } from '../subworkflows/local/genome_assembly_merged/main'
 include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
 include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
 include { MULTIQC                } from '../modules/nf-core/multiqc/main'
@@ -28,6 +29,12 @@ workflow FSPASSEMBLYPIPELINE {
     outdir
 
     main:
+
+    // Validate assembly mode selection
+    if (!params.use_paired_reads && !params.use_merged_reads) {
+        error "ERROR: At least one assembly mode must be enabled. " +
+              "Set --use_paired_reads true or --use_merged_reads true"
+    }
 
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
@@ -54,10 +61,21 @@ workflow FSPASSEMBLYPIPELINE {
             no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
         }
 
-    GENOME_ASSEMBLY (
-        ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
-    )
+    // Conditional: Run paired-end assembly workflow
+    if (params.use_paired_reads) {
+        GENOME_ASSEMBLY (
+            ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
+        )
+    }
 
+    // Conditional: Run merged reads assembly workflow
+    if (params.use_merged_reads) {
+        GENOME_ASSEMBLY_MERGED (
+            PREPROCESSING.out.fastp_reads_merged,
+            PREPROCESSING.out.fastp_reads_unmerged,
+            PREPROCESSING.out.fastp_reads
+        )
+    }
 
     CONTAMINATION_DETECTION(
     ch_samplesheet.bam)     // Channel: [meta, fasta, bam]
