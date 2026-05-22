@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/fspassemblypipeline/master/nextflow_schema.json",
     "title": "nf-core/fspassemblypipeline pipeline parameters",
-    "description": "Genome assembly pipeline for the Fungarium Sequencing Project, designed to process and assemble genomic data from fungal species, enabling high-quality reference genomes for research and biodiversity studies.",
+    "description": "Genome assembly pipeline for the Fungarium Sequencing Project, designed to process and assemble genomes from Illumina short reads to be used for research and biodiversity studies.",
     "type": "object",
     "$defs": {
         "input_output_options": {
@@ -139,13 +139,6 @@
                     "type": "boolean",
                     "description": "Do not use coloured log outputs.",
                     "fa_icon": "fas fa-palette",
-                    "hidden": true
-                },
-                "hook_url": {
-                    "type": "string",
-                    "description": "Incoming hook URL for messaging service",
-                    "fa_icon": "fas fa-people-group",
-                    "help_text": "Incoming hook URL for messaging service. Currently, MS Teams and Slack are supported.",
                     "hidden": true
                 },
                 "multiqc_config": {
