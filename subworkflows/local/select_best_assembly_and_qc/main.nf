@@ -148,17 +148,11 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     // Draft assemblies QC
     renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
-    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary
     busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt
     busco_full_table                            = BUSCO_BUSCO.out.full_table
-    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary
     busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt
     busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
     merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
     quast_results                               = QUAST.out.results
-    best_assembly_fasta                         = SELECTBESTASSEMBLY.out.best_assembly
     best_assembly_label                         = SELECTBESTASSEMBLY.out.best_assembly_label
-    best_assembly_meta                          = SELECTBESTASSEMBLY.out.best_assembly_meta
-    best_assembly_busco_scores                  = SELECTBESTASSEMBLY.out.busco_scores
-    best_assembly_aun_scores                    = SELECTBESTASSEMBLY.out.aun_scores
 }
