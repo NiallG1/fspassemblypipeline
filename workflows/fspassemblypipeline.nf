@@ -4,15 +4,16 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
-include { GENOME_ASSEMBLY_MERGED } from '../subworkflows/local/genome_assembly_merged/main'
-include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
-include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
-include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
+include { PREPROCESSING               } from '../subworkflows/local/preprocessing/main'
+include { GENOME_ASSEMBLY             } from '../subworkflows/local/genome_assembly/main'
+include { GENOME_ASSEMBLY_MERGED      } from '../subworkflows/local/genome_assembly_merged/main'
+include { SELECT_BEST_ASSEMBLY_AND_QC } from '../subworkflows/local/select_best_assembly_and_qc/main'
+include { CONTAMINATION_DETECTION     } from '../subworkflows/local/contamination_detection/main'
+include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
+include { paramsSummaryMap            } from 'plugin/nf-schema'
+include { paramsSummaryMultiqc        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML      } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText      } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -76,6 +77,12 @@ workflow FSPASSEMBLYPIPELINE {
             PREPROCESSING.out.fastp_reads
         )
     }
+
+    SELECT_BEST_ASSEMBLY_AND_QC (
+        GENOME_ASSEMBLY.out.draft_assemblies_paired,
+        GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged,
+        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+    )
 
     CONTAMINATION_DETECTION(
     ch_samplesheet.bam)     // Channel: [meta, fasta, bam]

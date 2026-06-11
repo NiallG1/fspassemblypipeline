@@ -2,7 +2,6 @@ include { SEQKIT_STATS                                     } from '../../../modu
 include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
 include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
-include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES as SPADES_MANUAL                          } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_KMERGENIE                       } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_READS_LENGTH                    } from '../../../modules/nf-core/spades/main'
@@ -18,11 +17,6 @@ include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modu
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
-include { RENAME_ASSEMBLIES                                } from '../../../modules/local/rename_assemblies/main'
-include { BUSCO_BUSCO                                      } from '../../../modules/nf-core/busco/busco/main'
-include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
-include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
-include { QUAST                                            } from '../../../modules/nf-core/quast/main'
 include {createAssemblyMeta                                } from '../utils_nfcore_fspassemblypipeline_pipeline/main'
 
 workflow GENOME_ASSEMBLY {
@@ -38,7 +32,7 @@ workflow GENOME_ASSEMBLY {
         tuple(new_meta, reads)
     }
 
-    FASTK_FASTK  ( ch_paired_reads )
+
 
 // ==================== K-mer strategies for genome assembly =======================
 
@@ -440,86 +434,11 @@ workflow GENOME_ASSEMBLY {
     }
 
 
-// =================== Draft assemblies QC =======================
-
-    RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
-
-    BUSCO_BUSCO ( RENAME_ASSEMBLIES.out.renamed_assemblies, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
-
-    // Map samples to their best BUSCO database based on taxonomy
-    // BUSCO_SPECIFIC runs BUSCO with a specific lineage for each sample. The lineage is determined based on the sample metadata and the list of available lineages.
-    // we attempt to find the most specific available BUSCO database for each sample by walking down the taxonomic hierarchy (family → order → class → phylum).
-    // If no matching database is found at any level, we fall back to the lineage specified by params.busco_lineage.
-
-    // Load BUSCO lineages once
-    def busco_lineages_file = file(params.lineages_list_file)
-
-    def busco_lineages = busco_lineages_file
-        .readLines() as Set
-
-    def ext = "_${params.busco_db_extension}"
-    def fallback = params.busco_lineage
-
-    // Add lineage to each sample and split into synchronized channels
-    ch_assemblies_with_lineage = RENAME_ASSEMBLIES.out.renamed_assemblies
-        .map { meta, assembly ->
-            // Find best matching lineage for this sample
-            def lineage = ['family', 'order', 'class', 'phylum']
-                .findResult { level ->
-                    def taxon = meta[level]
-                    if (!taxon) {
-                        log.info "  ${level}: not set"
-                        return null
-                    }
-                    def candidate = "${taxon.toLowerCase()}${ext}".toString()
-                    def found = candidate in busco_lineages
-                    found ? candidate : null
-                } ?: fallback
-
-            // Return tuple with lineage for splitting
-            tuple(meta, assembly, lineage)
-        }
-        .multiMap { meta, assembly, lineage ->
-            assemblies: tuple(meta, assembly)
-            lineages: lineage
-        }
-
-    // Specific BUSCO with per-sample lineage
-    BUSCO_SPECIFIC(
-        ch_assemblies_with_lineage.assemblies,
-        params.busco_mode,
-        ch_assemblies_with_lineage.lineages,
-        params.busco_lineages_path ?: [],
-        params.busco_config_file ?: [],
-        params.busco_clean_intermediates
-    )
-
-
-
-    // input channel for the first input required by merquryfk: tuple val(meta) , path(fastk_hist), path(fastk_ktab), path(assembly), path(haplotigs)
-    // to obtain this:
-    // 1. join fastk hist and ktab in a single list and map to meta.id to be use as key to then join with the assemblies
-    def ch_combined_fastk = FASTK_FASTK.out.hist.join(FASTK_FASTK.out.ktab, by: 0).map { meta, hist, ktab -> [ meta.id, hist, ktab ] }
-    // 2. map renamed assemblies to original meta.id (to be used as key to then join with combined fastk results)
-    def ch_draft_assemblies_mapped_to_id = RENAME_ASSEMBLIES.out.renamed_assemblies.map { meta, renamed_assembly -> [ meta.id, meta, renamed_assembly ]}
-    // 3. join combined fastk with renamed assemblies using meta.id as key
-    def ch_merquryfk_input = ch_combined_fastk.combine( ch_draft_assemblies_mapped_to_id, by: 0 ).map { sample_id, hist, ktab, meta, assembly -> [ meta, hist, ktab, assembly, [] ] }
-
-    MERQURYFK_MERQURYFK ( ch_merquryfk_input, [[],[]], [[],[]] ) // no mathernal and pathernal haplotypes for trio mode
-
-    // input channel for quast: I want to run quast once per sample, so I have to group the different assemblies per sample name
-    // ch_draft_assemblies_mapped_to_id is: [ sample_id, meta, assembly ]
-    // groupTuple(by: 0) groups by position 0 (sample_id)
-    // Result: [ sample_id, [meta1, meta2, meta3], [assembly1, assembly2, assembly3] ]
-    def ch_quast_input = ch_draft_assemblies_mapped_to_id.groupTuple( by: 0 ).map { sample_id, metas, assemblies -> [ [id: sample_id], assemblies ]}
-
-    QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
-
     emit:
     // K-mer strategy outputs - might be useful to collect results downstream
     seqkit_stats                                = ch_seqkit_stats
     getseqkitk_kmer                             = ch_getseqkitk_kmer
     getkmergeniek_k                             = ch_getkmergeniek_k
     // Assemblies - all assemblers and strategies mixed into one channel
-    draft_assemblies = ch_draft_assemblies_input
+    draft_assemblies_paired = ch_draft_assemblies_input
 }
