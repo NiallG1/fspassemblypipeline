@@ -150,9 +150,6 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         }
     // emits: [[id:'sample_id', reads_type:'R1R2', kmer_strategy:'kmergenie', assembler:'spades'], fa]
 
-    // ch_selected_best_assembly.view { "selected best assembly: ${it}"}
-    // ch_fastp_reads.view { "fastp reads: ${it}" }
-
 // =================== Best assembly correction with pypolca =======================
 
     // Pypolca needs reads and assembly paired by meta.id. However pypolca expects two tuples as input with meta and path
