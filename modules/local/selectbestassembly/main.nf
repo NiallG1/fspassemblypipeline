@@ -12,11 +12,11 @@ process SELECTBESTASSEMBLY {
     tuple val(meta), path(busco_summaries), path(quast_tsv), path(assemblies)
 
     output:
-    tuple val(meta), path("${meta.id}_best_assembly.fa.gz"),     emit: best_assembly
-    tuple val(meta), path("best_assembly.txt"),               emit: best_assembly_label
-    tuple val(meta), path("best_assembly_meta.txt"),          emit: best_assembly_meta
-    tuple val(meta), path("complete_single_copy_buscos.txt"), emit: busco_scores
-    tuple val(meta), path("auN_quast.txt"),                   emit: aun_scores, optional: true
+    tuple val(meta), path("${meta.id}_best_assembly.fa.gz"),           emit: best_assembly
+    tuple val(meta), path("best_assembly.txt"),                        emit: best_assembly_label
+    tuple val(meta), path("best_assembly_meta.txt"),                   emit: best_assembly_meta
+    tuple val(meta), path("complete_single_copy_buscos.txt"),          emit: busco_scores
+    tuple val(meta), path("auN_quast.txt"),                            emit: aun_scores, optional: true
     tuple val(meta), path("${meta.id}-select_best_assembly.log"),      emit: selectbestassembly_log
     tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_selectbestassembly
 
