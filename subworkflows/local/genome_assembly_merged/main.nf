@@ -17,6 +17,9 @@ include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modu
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
+include { MASURCA as MASURCA_MANUAL                        } from '../../../modules/local/masurca/main'
+include { MASURCA as MASURCA_KMERGENIE                     } from '../../../modules/local/masurca/main'
+include { MASURCA as MASURCA_READS_LENGTH                  } from '../../../modules/local/masurca/main'
 include {createAssemblyMeta                                } from '../utils_nfcore_fspassemblypipeline_pipeline/main'
 
 workflow GENOME_ASSEMBLY_MERGED {
@@ -319,61 +322,63 @@ workflow GENOME_ASSEMBLY_MERGED {
     // ABYSS is only run if skip_abyss is false. Within that, each strategy is only run if its corresponding skip parameter is false.
     // The channel with ABYSS assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
 
-    if (!params.skip_manual_strategy) {
-        // Join manual strategy (merged reads) with original paired-end reads
-        ch_abyss_input_manual = ch_manual_strategy
-            .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
-            .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
-            .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-            .multiMap { meta, pe_reads, merged_reads ->
-                input: [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
-                kmer:  params.abyss_kmer
-            }
+    if (!params.skip_abyss) {
+        if (!params.skip_manual_strategy) {
+            // Join manual strategy (merged reads) with original paired-end reads
+            ch_abyss_input_manual = ch_manual_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .multiMap { meta, pe_reads, merged_reads ->
+                    input: [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
+                    kmer:  params.abyss_kmer
+                }
 
-        ABYSS_MANUAL(ch_abyss_input_manual.input, ch_abyss_input_manual.kmer)
+            ABYSS_MANUAL(ch_abyss_input_manual.input, ch_abyss_input_manual.kmer)
 
-        // Mix into draft assemblies channel with new meta
-        ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-            ABYSS_MANUAL.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-        )
-    }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_MANUAL.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
 
-    if (!params.skip_kmergenie_strategy) {
-        // Join kmergenie strategy (merged reads) with original paired-end reads
-        ch_abyss_input_kmergenie = ch_kmergenie_strategy
-            .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
-            .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
-            .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-            .multiMap { meta, pe_reads, merged_reads ->
-                input:      [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
-                single_kmer: meta.single_kmer
-            }
+        if (!params.skip_kmergenie_strategy) {
+            // Join kmergenie strategy (merged reads) with original paired-end reads
+            ch_abyss_input_kmergenie = ch_kmergenie_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .multiMap { meta, pe_reads, merged_reads ->
+                    input:      [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
+                    single_kmer: meta.single_kmer
+                }
 
-        ABYSS_KMERGENIE(ch_abyss_input_kmergenie.input, ch_abyss_input_kmergenie.single_kmer)
+            ABYSS_KMERGENIE(ch_abyss_input_kmergenie.input, ch_abyss_input_kmergenie.single_kmer)
 
-        // Mix into draft assemblies channel with new meta
-        ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-            ABYSS_KMERGENIE.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-        )
-    }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_KMERGENIE.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
 
-    if (!params.skip_reads_length_strategy) {
-        // Join reads_length strategy (merged reads) with original paired-end reads
-        ch_abyss_input_reads_length = ch_reads_length_strategy
-            .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
-            .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
-            .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-            .multiMap { meta, pe_reads, merged_reads ->
-                input:      [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
-                single_kmer: meta.single_kmer
-            }
+        if (!params.skip_reads_length_strategy) {
+            // Join reads_length strategy (merged reads) with original paired-end reads
+            ch_abyss_input_reads_length = ch_reads_length_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .multiMap { meta, pe_reads, merged_reads ->
+                    input:      [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
+                    single_kmer: meta.single_kmer
+                }
 
-        ABYSS_READS_LENGTH(ch_abyss_input_reads_length.input, ch_abyss_input_reads_length.single_kmer)
+            ABYSS_READS_LENGTH(ch_abyss_input_reads_length.input, ch_abyss_input_reads_length.single_kmer)
 
-        // Mix into draft assemblies channel with new meta
-        ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-            ABYSS_READS_LENGTH.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
-        )
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                ABYSS_READS_LENGTH.out.scaffolds.map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'abyss') }
+            )
+        }
     }
 
 
@@ -446,6 +451,106 @@ workflow GENOME_ASSEMBLY_MERGED {
                     .concat(SPARSEASSEMBLER_READS_LENGTH.out.contigs)
                     .unique { meta, assembly -> meta.id }
                     .map { meta, assembly -> createAssemblyMeta(meta, assembly, 'sparseassembler') }
+            )
+        }
+    }
+
+    // ======= Masurca assemblies - nested conditionals (assembler × strategy) ======
+    // Masurca is only run if skip_masurca is false. Within that, each strategy is only run if its corresponding skip parameter is false.
+    // The channel with Masurca assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+    // Masurca needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 3 inputs (see PREPROCESSING subworkflow for example)
+    // MASURCA: [ meta, illumina, jump, pacbio, nanopore ]
+
+    if (!params.skip_masurca) {
+
+        if (!params.skip_manual_strategy) {
+            MASURCA_MANUAL(
+                ch_manual_strategy.map { meta, reads -> [meta, reads, [], [], []] },
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                params.masurca_kmer_size,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_MANUAL.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
+            )
+        }
+
+        if (!params.skip_kmergenie_strategy) {
+
+            // Create k-mer channel for Masurca (needs single kmer value) using multiMap
+            ch_masurca_kmergenie = ch_kmergenie_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [], [], [] ]
+                    single_kmer: meta.single_kmer
+                }
+
+            MASURCA_KMERGENIE(
+                ch_masurca_kmergenie.input,
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                ch_masurca_kmergenie.single_kmer,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_KMERGENIE.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
+            )
+        }
+
+        if (!params.skip_reads_length_strategy) {
+
+            // Create k-mer channel for Masurca (needs single kmer value) using multiMap
+            ch_masurca_reads_length = ch_reads_length_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [], [], [] ]
+                    single_kmer: meta.single_kmer
+                }
+
+            MASURCA_READS_LENGTH(
+                ch_masurca_reads_length.input,
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                ch_masurca_reads_length.single_kmer,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_READS_LENGTH.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
             )
         }
     }
