@@ -41,6 +41,12 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 27/03/2026 - Brought back missing `MULTIQC` module include in `workflows/fspassemblypipeline.nf` as it causes error I don't want to fix.
 - 02/04/2026 - Synced changelog entries from `Wu_fspassemblypipeline` and documented 02/04 debugging updates in this repository changelog.
 - 16/04/2026 - Implemented selection of busco lineage per sample
+- 29/04/2026 - Kmer strategies (manual, kmergenie, reads_length) implemented. Now the assemblers are run x3 with different kmer sizes.
+- 08/05/2026 - The workflow can now be run selecting some assemblers and kmer strategies, no need to run them all if it's not necessary.
+- 08/05/2026 - If no taxonomy is provided, only the preprocessing will be run.
+- 22/05/2026 - Thw workflow now runs using pre-processed paired-end reads (GENOME_ASSEMBLY), and merged reads (GENOME_ASSEMBLY_MERGED). It possible select one or the other with the parameters `use_paired_reads` and `use_merged_reads`.
+- 11/06/2026 - The QC of the draft assemblies has been moved to a separate subworkflow (SELECT_BEST_ASSEMBLY_AND_QC). This subworkflow collects the assemblies from GENOME_ASSEMBLY and GENOME_ASSEMBLY_MERGED, runs BUSCO, QUAST and Merqury for all of them, and then runs a script that selects the best assembly based on single-copy complete BUSCOs obtained using the specific lineage. If two or more assemblies have the same BUSCO score, the auN calculated by QUAST is used as a metric to evaluate the contiguity, and the most contiguous assembly is selected.
+- 17/06/2026 - SELECT_BEST_ASSEMBLY_AND_QC now runs pypolca to improve the selected best assembly (error correction). The corrected assembly is then QCed using BUSCO, QUAST and Merqury, and bwa-mem2 and samtools are used to analyse the coverage. A coverage visualisation script is also run for rapid analysis. 
 
 ### `Fixed`
 
