@@ -138,6 +138,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
             [ [id: sample_id], buscos, tsv, asms ]
         }
 
+    // Select best assembly based on BUSCO and QUAST metrics. The output is a channel with the best assembly per sample, along with its metadata and metrics.
+
     SELECTBESTASSEMBLY ( ch_select_best_assembly_input )
 
     // re-add meta information to the selected best assembly channel for downstream use
@@ -176,6 +178,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
 // =================== Best assembly QC =======================
 
+    // Run BUSCO on the polished best assembly using the general lineage specified by params.busco_lineage and then run BUSCO with the specific lineage determined for each sample based on its metadata.
+
     BUSCO_FINAL ( PYPOLCA_RUN.out.polished, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
 
     // Add lineage to each sample and split into synchronized channels
@@ -211,6 +215,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         params.busco_clean_intermediates
     )
 
+    // Run merquryfk on the polished best assembly using the fastk hist and ktab from the reads.
+    //The input channel for merquryfk is a tuple with meta, hist, ktab, polished_assembly, haplotigs (empty list since we don't have haplotigs).
 
     def ch_polished_assembly_mapped_to_id = PYPOLCA_RUN.out.polished.map { meta, polished_assembly -> [ meta.id, meta, polished_assembly ] }
 
@@ -219,7 +225,11 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     MERQURYFK_FINAL ( ch_merquryfk_final_input, [[],[]], [[],[]] )
 
+    // Run quast on the polished best assembly. This time we only have one assembly per sample as input, rather than a list of assemblies.
+
     QUAST_FINAL ( PYPOLCA_RUN.out.polished,[[],[]], [[],[]] ) // no reference fasta or gff for quast
+
+    // Run bwamem2 to map the reads to the polished best assembly. This is to perform a coverage analysis.
 
     BWAMEM2_INDEX ( PYPOLCA_RUN.out.polished )
 
@@ -244,6 +254,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         ch_bwamem2_asm,
         true // sort_bam set to true will view and sort the sam file, result: sorted bam file
         )
+
+    // Use samtools to extract coverage and flagstat metrics from the bam file produced by bwamem2.
 
     SAMTOOLS_INDEX ( BWAMEM2_MEM.out.bam )
 
@@ -276,6 +288,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     SAMTOOLS_FLAGSTAT ( ch_coverage_input_bam )
 
+    // Run coverage_visualisation.py to visualise the coverage and flagstat metrics produced by samtools.
     // Coverageviz needs a tuple with meta, samtools coverage output (txt) and samtools flagstat output (txt)
     def ch_coverageviz_input = SAMTOOLS_COVERAGE.out.coverage.join(SAMTOOLS_FLAGSTAT.out.flagstat, by: 0)
         .map { meta, coverage, flagstat -> [meta, coverage, flagstat] }
