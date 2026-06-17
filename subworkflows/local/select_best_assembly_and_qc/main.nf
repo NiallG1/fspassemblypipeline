@@ -215,7 +215,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         params.busco_clean_intermediates
     )
 
-    // Run merquryfk on the polished best assembly using the fastk hist and ktab from the reads. 
+    // Run merquryfk on the polished best assembly using the fastk hist and ktab from the reads.
     //The input channel for merquryfk is a tuple with meta, hist, ktab, polished_assembly, haplotigs (empty list since we don't have haplotigs).
 
     def ch_polished_assembly_mapped_to_id = PYPOLCA_RUN.out.polished.map { meta, polished_assembly -> [ meta.id, meta, polished_assembly ] }
@@ -255,7 +255,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
         true // sort_bam set to true will view and sort the sam file, result: sorted bam file
         )
 
-    // Use samtools to extract coverage and flagstat metrics from the bam file produced by bwamem2. 
+    // Use samtools to extract coverage and flagstat metrics from the bam file produced by bwamem2.
 
     SAMTOOLS_INDEX ( BWAMEM2_MEM.out.bam )
 
