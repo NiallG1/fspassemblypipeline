@@ -43,5 +43,6 @@ process SELECTBESTASSEMBLY {
     echo "R1R2_kmergenie_spades" > best_assembly.txt
     printf "reads_type=R1R2\nkmer_strategy=kmergenie\nassembler=spades\n" > best_assembly_meta.txt
     echo "R1R2_kmergenie_spades 100" > complete_single_copy_buscos.txt
+    touch ${meta.id}-select_best_assembly.log
     """
 }

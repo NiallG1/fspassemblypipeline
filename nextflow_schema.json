@@ -414,6 +414,10 @@
         "use_merged_reads": {
             "type": "boolean",
             "default": true
+        },
+        "pypolca_extra_args": {
+            "type": "string",
+            "default": "--careful"
         }
     }
 }
