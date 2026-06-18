@@ -62,25 +62,31 @@ workflow FSPASSEMBLYPIPELINE {
             no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
         }
 
+    // Initialise assembly output channels as empty
+    def ch_draft_assemblies_paired = channel.empty()
+    def ch_draft_assemblies_merged = channel.empty()
+
     // Conditional: Run paired-end assembly workflow
     if (params.use_paired_reads) {
-        GENOME_ASSEMBLY (
+        GENOME_ASSEMBLY(
             ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
         )
+        ch_draft_assemblies_paired = GENOME_ASSEMBLY.out.draft_assemblies_paired
     }
 
     // Conditional: Run merged reads assembly workflow
     if (params.use_merged_reads) {
-        GENOME_ASSEMBLY_MERGED (
+        GENOME_ASSEMBLY_MERGED(
             PREPROCESSING.out.fastp_reads_merged,
             PREPROCESSING.out.fastp_reads_unmerged,
             PREPROCESSING.out.fastp_reads
         )
+        ch_draft_assemblies_merged = GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged
     }
 
-    SELECT_BEST_ASSEMBLY_AND_QC (
-        GENOME_ASSEMBLY.out.draft_assemblies_paired,
-        GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged,
+    SELECT_BEST_ASSEMBLY_AND_QC(
+        ch_draft_assemblies_paired,
+        ch_draft_assemblies_merged,
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
 
