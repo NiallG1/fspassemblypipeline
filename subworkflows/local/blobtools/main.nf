@@ -20,9 +20,6 @@ workflow BLOBTOOLS {
                 tuple(meta, files[0])  // meta and fasta file
             }
 
-        // Create taxdump channel only if path is provided
-        ch_taxdump = params.taxdump ? Channel.fromPath(params.taxdump) : Channel.empty()
-
         CREATE_PROJECT_YAML(ch_yaml_input)
 
         // Debug: Check what YAML output looks like
@@ -33,7 +30,7 @@ workflow BLOBTOOLS {
         // Prepare channels for joining
         ch_samplesheet_keyed = ch_samplesheet
             .map { meta, files ->
-                tuple(meta.id, meta, files[0], files[1])
+                tuple(meta.id, meta, files[0], files[1])  // fasta and bam
             }
             .view { "Samplesheet keyed: ${it}" }
 
@@ -43,18 +40,16 @@ workflow BLOBTOOLS {
             }
             .view { "YAML keyed: ${it}" }
 
-        // Join and combine
+        // Join and combine with BUSCO
         ch_btk = ch_samplesheet_keyed
             .join(ch_yaml_keyed)
             .view { "After join: ${it}" }
             .combine(ch_busco)
             .view { "After combine with busco: ${it}" }
-            .combine(ch_taxdump)
-            .view { "After combine with taxdump: ${it}" }
-            .map { id, meta, fasta, bam, yaml, busco, taxdump ->
-                tuple(meta, fasta, bam, yaml, busco, taxdump)
+            .map { id, meta, fasta, bam, yaml, busco ->
+                tuple(meta, fasta, bam, yaml, busco)
             }
-            .view { "Final input to BLOBTOOLKIT: ${it}" }
+            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco): ${it}" }
 
         //
         // Create Blobtools dataset files

@@ -2,48 +2,49 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     tag "$meta.id"
     label 'process_medium'
 
-
     conda "${moduleDir}/environment.yml"
-    container "docker.io/genomehubs/blobtoolkit:latest"
+    container "community.wave.seqera.io/library/python_gcc_linux-64_gxx_linux-64_sysroot_linux-64_pruned:c50e1fdcdb18252f"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(taxdump)
-
+    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco)
 
     output:
-    tuple val(meta), path(prefix), emit: blobdir
+    tuple val(meta), path("${meta.id}"), emit: blobdir
     tuple val("${task.process}"), val('blobtoolkit'), eval("btk --version | cut -d' ' -f2 | sed 's/v//'"), topic: versions, emit: versions_blobtoolkit
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
-        exit 1, "BLOBTOOLKIT_BLOBDIR module does not support Conda. Please use Docker / Singularity / Podman instead."
-    }
+    //if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
+    //    exit 1, "BLOBTOOLKIT_BLOBDIR module does not support Conda. Please use Docker / Singularity / Podman instead."
+    //}
 
     def args = task.ext.args ?: ''
-    prefix = task.ext.prefix ?: "${meta.id}"
-    //def busco_args = (busco instanceof List ? busco : [busco]).collect { file -> "--busco " + file } .join(' ')
-
+    def prefix = task.ext.prefix ?: "${meta.id}"
+    def busco_arg = busco ? "--busco ${busco}" : ""
 
     """
-    blobtools replace \\
+    blobtools create \\
         --fasta ${fasta} \\
         --meta ${yaml} \\
         --threads ${task.cpus} \\
-        --cov ${bam} \\
-        $args \\
+        ${busco_arg} \\
+        ${args} \\
         ${prefix}
 
+    blobtools add \\
+        --cov ${bam} \\
+        --threads ${task.cpus} \\
+        ${prefix}
     """
 
     stub:
     def args = task.ext.args ?: ''
-
+    def prefix = task.ext.prefix ?: "${meta.id}"
     """
-    echo $args
-
-    touch ${prefix}.bam
+    mkdir -p ${prefix}
+    touch ${prefix}/meta.json
+    touch ${prefix}/identifiers.json
     """
 }
