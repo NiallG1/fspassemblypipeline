@@ -4,15 +4,17 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
-include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
-include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
-include { BLOBTOOLS              } from '../subworkflows/local/blobtools/main'
-include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
+include { PREPROCESSING               } from '../subworkflows/local/preprocessing/main'
+include { GENOME_ASSEMBLY             } from '../subworkflows/local/genome_assembly/main'
+include { GENOME_ASSEMBLY_MERGED      } from '../subworkflows/local/genome_assembly_merged/main'
+include { SELECT_BEST_ASSEMBLY_AND_QC } from '../subworkflows/local/select_best_assembly_and_qc/main'
+include { CONTAMINATION_DETECTION     } from '../subworkflows/local/contamination_detection/main'
+include { BLOBTOOLS                   } from '../subworkflows/local/blobtools/main'
+include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
+include { paramsSummaryMap            } from 'plugin/nf-schema'
+include { paramsSummaryMultiqc        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML      } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText      } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -29,6 +31,12 @@ workflow FSPASSEMBLYPIPELINE {
     outdir
 
     main:
+
+    // Validate assembly mode selection
+    if (!params.use_paired_reads && !params.use_merged_reads) {
+        error "ERROR: At least one assembly mode must be enabled. " +
+              "Set --use_paired_reads true or --use_merged_reads true"
+    }
 
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
@@ -55,10 +63,33 @@ workflow FSPASSEMBLYPIPELINE {
             no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
         }
 
-    GENOME_ASSEMBLY (
-        ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
-    )
+    // Initialise assembly output channels as empty
+    def ch_draft_assemblies_paired = channel.empty()
+    def ch_draft_assemblies_merged = channel.empty()
 
+    // Conditional: Run paired-end assembly workflow
+    if (params.use_paired_reads) {
+        GENOME_ASSEMBLY(
+            ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
+        )
+        ch_draft_assemblies_paired = GENOME_ASSEMBLY.out.draft_assemblies_paired
+    }
+
+    // Conditional: Run merged reads assembly workflow
+    if (params.use_merged_reads) {
+        GENOME_ASSEMBLY_MERGED(
+            PREPROCESSING.out.fastp_reads_merged,
+            PREPROCESSING.out.fastp_reads_unmerged,
+            PREPROCESSING.out.fastp_reads
+        )
+        ch_draft_assemblies_merged = GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged
+    }
+
+    SELECT_BEST_ASSEMBLY_AND_QC(
+        ch_draft_assemblies_paired,
+        ch_draft_assemblies_merged,
+        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+    )
 
     CONTAMINATION_DETECTION(
     ch_samplesheet.bam)
