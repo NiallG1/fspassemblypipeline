@@ -12,3 +12,4 @@ preprocessing_only.nf
 .lineage/
 EGP017_025_003_debug/ 
 test_btklocal/
+btk_csi_debug/

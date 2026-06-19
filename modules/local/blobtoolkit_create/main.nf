@@ -6,7 +6,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     container "community.wave.seqera.io/library/python_gcc_linux-64_gxx_linux-64_sysroot_linux-64_pruned:c50e1fdcdb18252f"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco)
+    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(index)
 
     output:
     tuple val(meta), path("${meta.id}"), emit: blobdir

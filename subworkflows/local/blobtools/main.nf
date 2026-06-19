@@ -1,7 +1,8 @@
-include { BLOBTK_PLOT               } from '../../../modules/nf-core/blobtk/plot/main'
-include { CREATE_PROJECT_YAML       } from '../../../modules/local/createyml/main'
-include { BLOBTOOLKIT_CREATEBLOBDIR } from '../../../modules/local/blobtoolkit_create/main'
-include { BLOBTK_CREATE             } from '../../../modules/nf-core/blobtk/create/main'
+include { BLOBTK_PLOT                   } from '../../../modules/nf-core/blobtk/plot/main'
+include { CREATE_PROJECT_YAML           } from '../../../modules/local/createyml/main'
+include { BLOBTOOLKIT_CREATEBLOBDIR     } from '../../../modules/local/blobtoolkit_create/main'
+include { BLOBTK_CREATE                 } from '../../../modules/nf-core/blobtk/create/main'
+include { SAMTOOLS_INDEX as SAMTOOLS_CSI} from '../../../modules/nf-core/samtools/index/main'
 
 
 workflow BLOBTOOLS {
@@ -40,16 +41,43 @@ workflow BLOBTOOLS {
             }
             .view { "YAML keyed: ${it}" }
 
+
+           
+        ch_samtools = ch_samplesheet
+            .map { meta, files ->
+                tuple(meta, files[1])  // fasta and bam
+            }
+        
+        SAMTOOLS_CSI(ch_samtools)
+
+
+        ch_samtools_keyed = SAMTOOLS_CSI.out.index
+            .map { meta, index ->
+                tuple(meta.id, index)
+            }
+            .view { "index keyed: ${it}" }
+
+
+
+
         // Join and combine with BUSCO
         ch_btk = ch_samplesheet_keyed
             .join(ch_yaml_keyed)
             .view { "After join: ${it}" }
             .combine(ch_busco)
             .view { "After combine with busco: ${it}" }
-            .map { id, meta, fasta, bam, yaml, busco ->
-                tuple(meta, fasta, bam, yaml, busco)
+            .join(ch_samtools_keyed)
+            .view { "After combnr with index: ${it}" }
+            .map { id, meta, fasta, bam, yaml, busco, index ->
+                tuple(meta, fasta, bam, yaml, busco, index)
             }
-            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco): ${it}" }
+            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco, index): ${it}" }
+
+        
+
+
+
+            
 
         //
         // Create Blobtools dataset files
