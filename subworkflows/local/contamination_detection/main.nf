@@ -49,7 +49,7 @@ workflow CONTAMINATION_DETECTION {
     ch_comparison_input = TIARA_TIARA.out.classifications
         .join(CONVERTFCSRPT.out.fcs_report_reformatted)
 
-    //COMPARISON(ch_comparison_input)
+    COMPARISON(ch_comparison_input)
 
     emit:
     tiara_classifications  = TIARA_TIARA.out.classifications
