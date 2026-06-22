@@ -2,9 +2,9 @@ include { SEQKIT_STATS                                     } from '../../../modu
 include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
 include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
-//include { SPADES as SPADES_MANUAL                          } from '../../../modules/nf-core/spades/main'
-//include { SPADES as SPADES_KMERGENIE                       } from '../../../modules/nf-core/spades/main'
-//include { SPADES as SPADES_READS_LENGTH                    } from '../../../modules/nf-core/spades/main'
+include { SPADES_MERGED as SPADES_MANUAL                   } from '../../../modules/local/spades_merged/main'
+include { SPADES_MERGED as SPADES_KMERGENIE                } from '../../../modules/local/spades_merged/main'
+include { SPADES_MERGED as SPADES_READS_LENGTH             } from '../../../modules/local/spades_merged/main'
 include { MEGAHIT as MEGAHIT_MANUAL                        } from '../../../modules/nf-core/megahit/main'
 include { MEGAHIT as MEGAHIT_KMERGENIE                     } from '../../../modules/nf-core/megahit/main'
 include { MEGAHIT as MEGAHIT_READS_LENGTH                  } from '../../../modules/nf-core/megahit/main'
@@ -196,49 +196,60 @@ workflow GENOME_ASSEMBLY_MERGED {
     // Spades needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 2 inputs (see PREPROCESSING subworkflow for example)
     // SPADES: [ meta, illumina, pacbio, nanopore ]
 
-    // if (!params.skip_spades) {
+    if (!params.skip_spades) {
 
-    //     if (!params.skip_manual_strategy) {
-    //         SPADES_MANUAL(
-    //             ch_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
-    //             [],
-    //             []
-    //         )
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPADES_MANUAL.out.scaffolds
-    //                 .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
-    //         )
-    //     }
+        if (!params.skip_manual_strategy) {
+            // Join manual strategy (merged reads) with unmerged reads
+            ch_spades_input_manual = ch_manual_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .multiMap { meta, pe_reads, merged_reads ->
+                    input: [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
+                    kmer:  params.abyss_kmer
+                }
 
-    //     if (!params.skip_kmergenie_strategy) {
-    //         SPADES_KMERGENIE(
-    //             ch_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
-    //             [],
-    //             []
-    //         )
+        if (!params.skip_manual_strategy) {
+            SPADES_MANUAL(
+                ch_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
+                [],
+                []
+            )
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPADES_MANUAL.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
+            )
+        }
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPADES_KMERGENIE.out.scaffolds
-    //                 .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
-    //         )
-    //     }
+        if (!params.skip_kmergenie_strategy) {
+            SPADES_KMERGENIE(
+                ch_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
+                [],
+                []
+            )
 
-    //     if (!params.skip_reads_length_strategy) {
-    //         SPADES_READS_LENGTH(
-    //             ch_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
-    //             [],
-    //             []
-    //         )
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPADES_KMERGENIE.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
+            )
+        }
 
-    //         // Mix into draft assemblies channel with new meta
-    //         ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
-    //             SPADES_READS_LENGTH.out.scaffolds
-    //                 .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
-    //         )
-    //     }
-    // }
+        if (!params.skip_reads_length_strategy) {
+            SPADES_READS_LENGTH(
+                ch_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
+                [],
+                []
+            )
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                SPADES_READS_LENGTH.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'spades') }
+            )
+        }
+    }
 
     // ======= Megahit assemblies - nested conditionals (assembler × strategy) ======
     // Megahit is only run if skip_megahit is false. Within that, each strategy is only run if its corresponding skip parameter is false.
