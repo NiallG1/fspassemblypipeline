@@ -204,7 +204,6 @@ workflow GENOME_ASSEMBLY_MERGED {
                 .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
                 .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
                 .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-                .view { "spades manual channel: ${it}" }
 
             SPADES_MANUAL(ch_spades_input_manual, [], [])
 
@@ -221,7 +220,6 @@ workflow GENOME_ASSEMBLY_MERGED {
                 .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
                 .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
                 .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-                .view { "spades kmergenie channel: ${it}" }
 
             SPADES_KMERGENIE(ch_spades_input_kmergenie, [], [])
 
@@ -238,7 +236,6 @@ workflow GENOME_ASSEMBLY_MERGED {
                 .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
                 .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
                 .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-                .view { "spades reads length channel: ${it}" }
 
             SPADES_READS_LENGTH(ch_spades_input_reads_length, [], [])
 
