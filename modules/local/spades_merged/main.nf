@@ -8,7 +8,7 @@ process SPADES_MERGED {
         'community.wave.seqera.io/library/spades:4.1.0--77799c52e1d1054a' }"
 
     input:
-    tuple val(meta), path(illumina), path(pacbio), path(nanopore)
+    tuple val(meta), path(illumina), path (merged)
     path yml
     path hmm
 
@@ -18,7 +18,7 @@ process SPADES_MERGED {
     tuple val(meta), path('*.transcripts.fa.gz')  , optional:true, emit: transcripts
     tuple val(meta), path('*.gene_clusters.fa.gz'), optional:true, emit: gene_clusters
     tuple val(meta), path('*.assembly.gfa.gz')    , optional:true, emit: gfa
-    tuple val(meta), path('*.warnings.log')         , optional:true, emit: warnings
+    tuple val(meta), path('*.warnings.log')       , optional:true, emit: warnings
     tuple val(meta), path('*.spades.log')         , emit: log
     tuple val("${task.process}"), val('spades'), eval("spades.py --version 2>&1 | sed -n 's/^.*SPAdes genome assembler v//p'"), topic: versions, emit: versions_spades
 
@@ -29,18 +29,14 @@ process SPADES_MERGED {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def maxmem = task.memory.toGiga()
-    def illumina_reads = illumina ? ( meta.single_end ? "--merged $illumina" : "-1 ${illumina[0]} -2 ${illumina[1]}" ) : ""
-    def pacbio_reads = pacbio ? "--pacbio $pacbio" : ""
-    def nanopore_reads = nanopore ? "--nanopore $nanopore" : ""
     def custom_hmms = hmm ? "--custom-hmms $hmm" : ""
-    def reads = yml ? "--dataset $yml" : "$illumina_reads $pacbio_reads $nanopore_reads"
     """
     spades.py \\
         $args \\
         --threads $task.cpus \\
         --memory $maxmem \\
         $custom_hmms \\
-        $reads \\
+        --merged $merged -1 ${illumina[0]} -2 ${illumina[1]} \\
         -o ./
     mv spades.log ${prefix}.spades.log
 

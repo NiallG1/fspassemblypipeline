@@ -29,16 +29,6 @@ input:
           of size 1 and 2 for single-end and paired-end data,
           respectively. This input data type is required.
         ontologies: []
-    - pacbio:
-        type: file
-        description: |
-          List of input PacBio CLR FastQ files of size 1.
-        ontologies: []
-    - nanopore:
-        type: file
-        description: |
-          List of input FastQ files of size 1, originating from Oxford Nanopore technology.
-        ontologies: []
   - yml:
       type: file
       description: |
@@ -165,10 +155,4 @@ topics:
           type: eval
           description: The expression to obtain the version of the tool
 authors:
-  - "@JoseEspinosa"
-  - "@drpatelh"
-  - "@d4straub"
-maintainers:
-  - "@JoseEspinosa"
-  - "@drpatelh"
-  - "@d4straub"
+  - "@LiaOb21"

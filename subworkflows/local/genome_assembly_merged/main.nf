@@ -204,17 +204,10 @@ workflow GENOME_ASSEMBLY_MERGED {
                 .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
                 .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
                 .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
-                .multiMap { meta, pe_reads, merged_reads ->
-                    input: [ meta, pe_reads, merged_reads ]  // ABYSS expects: [meta, paired_reads, merged_reads]
-                    kmer:  params.abyss_kmer
-                }
+                .view { "spades manual channel: ${it}" }
 
-        if (!params.skip_manual_strategy) {
-            SPADES_MANUAL(
-                ch_manual_strategy.map { meta, reads -> [meta, reads, [], []] },
-                [],
-                []
-            )
+            SPADES_MANUAL(ch_spades_input_manual, [], [])
+
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
                 SPADES_MANUAL.out.scaffolds
@@ -223,11 +216,14 @@ workflow GENOME_ASSEMBLY_MERGED {
         }
 
         if (!params.skip_kmergenie_strategy) {
-            SPADES_KMERGENIE(
-                ch_kmergenie_strategy.map { meta, reads -> [meta, reads, [], []] },
-                [],
-                []
-            )
+            // Join kmergenie strategy (merged reads) with unmerged reads
+            ch_spades_input_kmergenie = ch_kmergenie_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .view { "spades kmergenie channel: ${it}" }
+
+            SPADES_KMERGENIE(ch_spades_input_kmergenie, [], [])
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
@@ -237,11 +233,14 @@ workflow GENOME_ASSEMBLY_MERGED {
         }
 
         if (!params.skip_reads_length_strategy) {
-            SPADES_READS_LENGTH(
-                ch_reads_length_strategy.map { meta, reads -> [meta, reads, [], []] },
-                [],
-                []
-            )
+            // Join reads length strategy (merged reads) with unmerged reads
+            ch_spades_input_reads_length = ch_reads_length_strategy
+                .map { meta, merged_reads -> [meta.id, meta, merged_reads] }
+                .join(ch_fastp_reads_unmerged.map { meta, pe_reads -> [meta.id, pe_reads] })
+                .map { id, meta, merged_reads, pe_reads -> [meta, pe_reads, merged_reads] }
+                .view { "spades reads length channel: ${it}" }
+
+            SPADES_READS_LENGTH(ch_spades_input_reads_length, [], [])
 
             // Mix into draft assemblies channel with new meta
             ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
