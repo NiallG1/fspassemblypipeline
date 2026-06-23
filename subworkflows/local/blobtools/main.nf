@@ -1,7 +1,5 @@
-include { BLOBTK_PLOT                   } from '../../../modules/nf-core/blobtk/plot/main'
 include { CREATE_PROJECT_YAML           } from '../../../modules/local/createyml/main'
 include { BLOBTOOLKIT_CREATEBLOBDIR     } from '../../../modules/local/blobtoolkit_create/main'
-include { BLOBTK_CREATE                 } from '../../../modules/nf-core/blobtk/create/main'
 include { SAMTOOLS_INDEX as SAMTOOLS_CSI} from '../../../modules/nf-core/samtools/index/main'
 
 
@@ -9,6 +7,7 @@ workflow BLOBTOOLS {
 
     take:
     ch_samplesheet
+    ch_blobtools_taxonomy
 
     main:
 
@@ -41,6 +40,10 @@ workflow BLOBTOOLS {
             }
             .view { "YAML keyed: ${it}" }
 
+        ch_taxonomy_keyed = ch_blobtools_taxonomy
+            .map { meta, file ->
+                tuple(meta.id, file)    
+            }
 
            
         ch_samtools = ch_samplesheet
@@ -63,15 +66,13 @@ workflow BLOBTOOLS {
         // Join and combine with BUSCO
         ch_btk = ch_samplesheet_keyed
             .join(ch_yaml_keyed)
-            .view { "After join: ${it}" }
             .combine(ch_busco)
-            .view { "After combine with busco: ${it}" }
             .join(ch_samtools_keyed)
-            .view { "After combnr with index: ${it}" }
-            .map { id, meta, fasta, bam, yaml, busco, index ->
-                tuple(meta, fasta, bam, yaml, busco, index)
+            .join(ch_taxonomy_keyed)
+            .map { id, meta, fasta, bam, yaml, busco, index, taxonomy ->
+                tuple(meta, fasta, bam, yaml, busco, index, taxonomy)
             }
-            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco, index): ${it}" }
+            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco, index, taxonomy): ${it}" }
 
         
 

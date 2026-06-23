@@ -6,7 +6,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     container "community.wave.seqera.io/library/python_gcc_linux-64_gxx_linux-64_sysroot_linux-64_pruned:c50e1fdcdb18252f"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(index)
+    tuple val(meta), path(fasta), path(bam), path(yaml), path(busco), path(index), path(taxonomy)
 
     output:
     tuple val(meta), path("${meta.id}"), emit: blobdir
@@ -37,6 +37,15 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
         --cov ${bam} \\
         --threads ${task.cpus} \\
         ${prefix}
+
+    blobtools add \\
+       --text ${taxonomy} \\
+       --text-delimiter '\t' \\
+       --text-cols 'seq_id=identifiers,taxonomy=taxonomy' \\
+       --text-header \\
+        --key plot.cat=taxonomy \\
+        ${prefix}
+
     """
 
     stub:
