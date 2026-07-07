@@ -91,8 +91,13 @@ workflow FSPASSEMBLYPIPELINE {
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
 
+    ch_contamination_detection_input = SELECT_BEST_ASSEMBLY_AND_QC.out.best_assembly_polished
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific).view()
+
     CONTAMINATION_DETECTION(
-    ch_samplesheet.bam)
+    ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
+    )
 
     BLOBTOOLS(
     ch_samplesheet.bam,

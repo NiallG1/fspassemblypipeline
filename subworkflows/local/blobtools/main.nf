@@ -11,8 +11,7 @@ workflow BLOBTOOLS {
 
     main:
 
-        // Create a channel from the BUSCO file path in config
-        ch_busco = Channel.fromPath(params.busco_file)
+       
 
         // Create YAML files from samplesheet metadata
         ch_yaml_input = ch_samplesheet
@@ -30,7 +29,7 @@ workflow BLOBTOOLS {
         // Prepare channels for joining
         ch_samplesheet_keyed = ch_samplesheet
             .map { meta, files ->
-                tuple(meta.id, meta, files[0], files[1])  // fasta and bam
+                tuple(meta.id, meta, files[0], files[1], files[2])  // fasta and bam
             }
             .view { "Samplesheet keyed: ${it}" }
 
@@ -66,13 +65,12 @@ workflow BLOBTOOLS {
         // Join and combine with BUSCO
         ch_btk = ch_samplesheet_keyed
             .join(ch_yaml_keyed)
-            .combine(ch_busco)
             .join(ch_samtools_keyed)
             .join(ch_taxonomy_keyed)
-            .map { id, meta, fasta, bam, yaml, busco, index, taxonomy ->
-                tuple(meta, fasta, bam, yaml, busco, index, taxonomy)
+            .map { id, meta, fasta, bam, busco, yaml, index, taxonomy ->
+                tuple(meta, fasta, bam, busco, yaml, index, taxonomy)
             }
-            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, yaml, busco, index, taxonomy): ${it}" }
+            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, busco, yaml, index, taxonomy): ${it}" }
 
         
 

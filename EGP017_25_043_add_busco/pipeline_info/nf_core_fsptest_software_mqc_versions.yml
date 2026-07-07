@@ -1,0 +1,17 @@
+BLOBTOOLKIT_CREATEBLOBDIR:
+  blobtoolkit: 4.4.5
+COMPARISON:
+  comparison: 4.5.3
+CONVERTFCSRPT:
+  convertfcsrpt: 9.5
+CREATE_PROJECT_YAML:
+  createyml: 3.11.15
+FCSGX_RUNGX:
+  fcsgx: 0.5.5
+SAMTOOLS_CSI:
+  samtools: 1.23.1
+TIARA_TIARA:
+  tiara: 1.0.3
+Workflow:
+    nf-core/fspassemblypipeline: v1.0.0dev
+    Nextflow: 26.04.0
