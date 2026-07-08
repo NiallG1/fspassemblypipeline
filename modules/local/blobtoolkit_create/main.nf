@@ -3,7 +3,6 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     label 'process_medium'
 
     conda "${moduleDir}/environment.yml"
-    container "community.wave.seqera.io/library/python_gcc_linux-64_gxx_linux-64_sysroot_linux-64_pruned:c50e1fdcdb18252f"
 
     input:
     tuple val(meta), path(fasta), path(bam), path(busco), path(yaml), path(index), path(taxonomy)
@@ -16,14 +15,11 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     task.ext.when == null || task.ext.when
 
     script:
-    //if (workflow.profile.tokenize(',').intersect(['conda', 'mamba']).size() >= 1) {
-    //    exit 1, "BLOBTOOLKIT_BLOBDIR module does not support Conda. Please use Docker / Singularity / Podman instead."
-    //}
-
+    
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def busco_arg = busco ? "--busco ${busco}" : ""
-
+    // we have btk do seperate create and add because this was how we got it to work. in theory you can add all inputs in 1 create block, we had issues doing this.
     """
     blobtools create \\
         --fasta ${fasta} \\
@@ -45,7 +41,6 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
        --text-header \\
         --key plot.cat=taxonomy \\
         ${prefix}
-
     """
 
     stub:

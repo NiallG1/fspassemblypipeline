@@ -10,7 +10,8 @@ workflow BLOBTOOLS {
     ch_blobtools_taxonomy
 
     main:
-
+    // a channel for each input is create and finally all channels combined into one tuple to give blobtools a single tuple.
+    // This is to allow for easier adding subtracting of inputs for blobtools but just removing or adding channels. Also blobtools wants a single tuple as input
        
 
         // Create YAML files from samplesheet metadata
@@ -60,8 +61,6 @@ workflow BLOBTOOLS {
             .view { "index keyed: ${it}" }
 
 
-
-
         // Join and combine with BUSCO
         ch_btk = ch_samplesheet_keyed
             .join(ch_yaml_keyed)
@@ -71,13 +70,6 @@ workflow BLOBTOOLS {
                 tuple(meta, fasta, bam, busco, yaml, index, taxonomy)
             }
             .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, busco, yaml, index, taxonomy): ${it}" }
-
-        
-
-
-
-            
-
         //
         // Create Blobtools dataset files
         //

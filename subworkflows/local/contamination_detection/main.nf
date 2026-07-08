@@ -26,14 +26,8 @@ workflow CONTAMINATION_DETECTION {
             )
         }
 
-
-
-
     // Run Tiara classification
     TIARA_TIARA(ch_tiara)
-
-    
-
 
     // Run FCS-GX contamination screening
     FCSGX_RUNGX(ch_fcsgx, params.db_path, params.ramdisk_path ?:[])

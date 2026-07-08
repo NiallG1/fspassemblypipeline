@@ -10,21 +10,6 @@
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",
                         "installed_by": ["modules"]
                     },
-                    "blobtk/create": {
-                        "branch": "master",
-                        "git_sha": "82f099dea43620d4d9a80b9d7014731d173f28a2",
-                        "installed_by": ["modules"]
-                    },
-                    "blobtk/depth": {
-                        "branch": "master",
-                        "git_sha": "02616d1725cc2f97670e25d14d7d1c29d412dffc",
-                        "installed_by": ["modules"]
-                    },
-                    "blobtk/plot": {
-                        "branch": "master",
-                        "git_sha": "02616d1725cc2f97670e25d14d7d1c29d412dffc",
-                        "installed_by": ["modules"]
-                    },
                     "busco/busco": {
                         "branch": "master",
                         "git_sha": "6d46786420b4d7bc88eba026eb389c0c5535d120",

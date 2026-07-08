@@ -12,7 +12,6 @@ process CREATE_PROJECT_YAML {
 
     output:
     tuple val(meta), path("${meta.id}.yaml"), emit: yaml
-    tuple val("${task.process}"), val('createyml'), eval("python --version | sed 's/Python //g'"), topic: versions, emit: versions_yml
 
     when:
     task.ext.when == null || task.ext.when
