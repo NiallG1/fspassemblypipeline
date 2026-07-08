@@ -207,6 +207,3 @@ blob_taxonomy <- df_compare %>%
 blob_file <- paste0(output_prefix, "_blobtools_taxonomy.tsv")
 write_tsv(blob_taxonomy, blob_file)
 cat("Saved blobtools taxonomy to:", blob_file, "\n")
-
-
-

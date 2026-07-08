@@ -108,7 +108,7 @@ workflow PIPELINE_INITIALISATION {
             // file 1 can be either fastq or bam, while file 2 can only be fastq (R2)
             meta, file_1, file_2, fasta, busco ->
                 if ( meta.type == 'bam') {
-                    // if type is bam the structure of the samplesheet must be: sample_id, fasta file, bam file, busco full table 
+                    // if type is bam the structure of the samplesheet must be: sample_id, fasta file, bam file, busco full table
                     return [ meta.id, meta, [ fasta, file_1, busco ] ]
                 } else if (!file_2) {
                     // if file 2 (_R2.fq.gz) is not given, expect only file_1 (_R1.fq.gz, single end)

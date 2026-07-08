@@ -12,7 +12,7 @@ workflow BLOBTOOLS {
     main:
     // a channel for each input is create and finally all channels combined into one tuple to give blobtools a single tuple.
     // This is to allow for easier adding subtracting of inputs for blobtools but just removing or adding channels. Also blobtools wants a single tuple as input
-       
+
 
         // Create YAML files from samplesheet metadata
         ch_yaml_input = ch_samplesheet
@@ -42,15 +42,15 @@ workflow BLOBTOOLS {
 
         ch_taxonomy_keyed = ch_blobtools_taxonomy
             .map { meta, file ->
-                tuple(meta.id, file)    
+                tuple(meta.id, file)
             }
 
-           
+
         ch_samtools = ch_samplesheet
             .map { meta, files ->
                 tuple(meta, files[1])  // fasta and bam
             }
-        
+
         SAMTOOLS_CSI(ch_samtools)
 
 

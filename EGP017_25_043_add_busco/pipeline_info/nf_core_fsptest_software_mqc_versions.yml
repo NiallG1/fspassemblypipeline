@@ -13,5 +13,5 @@ SAMTOOLS_CSI:
 TIARA_TIARA:
   tiara: 1.0.3
 Workflow:
-    nf-core/fspassemblypipeline: v1.0.0dev
-    Nextflow: 26.04.0
+  nf-core/fspassemblypipeline: v1.0.0dev
+  Nextflow: 26.04.0

@@ -371,8 +371,7 @@
             "default": "Scaffold 1 g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
         },
         "db_path": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/gxdb/"
+            "type": "string"
         },
         "ramdisk_path": {
             "type": "string"
@@ -444,13 +443,8 @@
             "type": "integer",
             "default": 300000000
         },
-        "busco_file": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/fspassemblypipeline/assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/busco_specific_pypolca/EGP017_25_B2_336_best_assembly_full_table.tsv"
-        },
         "taxdump": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/taxdump"
+            "type": "string"
         }
     }
 }
