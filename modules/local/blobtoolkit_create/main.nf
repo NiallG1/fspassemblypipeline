@@ -4,6 +4,8 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
 
     conda "${moduleDir}/environment.yml"
 
+    container "docker.io/genomehubs/blobtoolkit:4.4.6"
+
     input:
     tuple val(meta), path(fasta), path(bam), path(busco), path(yaml), path(index), path(taxonomy)
 
@@ -15,7 +17,6 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     task.ext.when == null || task.ext.when
 
     script:
-    
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     def busco_arg = busco ? "--busco ${busco}" : ""
