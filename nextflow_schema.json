@@ -445,6 +445,10 @@
         },
         "taxdump": {
             "type": "string"
+        },
+        "min_contig_size": {
+            "type": "integer",
+            "default": 1000
         }
     }
 }
