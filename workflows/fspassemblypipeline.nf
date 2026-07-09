@@ -94,7 +94,7 @@ workflow FSPASSEMBLYPIPELINE {
     ch_contamination_detection_input = SELECT_BEST_ASSEMBLY_AND_QC.out.best_assembly_polished
     .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
     .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific).view()
-
+.map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
     CONTAMINATION_DETECTION(
     ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
     )
