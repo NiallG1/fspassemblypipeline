@@ -9,6 +9,7 @@ include { GENOME_ASSEMBLY             } from '../subworkflows/local/genome_assem
 include { GENOME_ASSEMBLY_MERGED      } from '../subworkflows/local/genome_assembly_merged/main'
 include { SELECT_BEST_ASSEMBLY_AND_QC } from '../subworkflows/local/select_best_assembly_and_qc/main'
 include { CONTAMINATION_DETECTION     } from '../subworkflows/local/contamination_detection/main'
+include { BLOBTOOLS                   } from '../subworkflows/local/blobtools/main'
 include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap            } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
@@ -90,8 +91,17 @@ workflow FSPASSEMBLYPIPELINE {
         PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
 
+    ch_contamination_detection_input = SELECT_BEST_ASSEMBLY_AND_QC.out.best_assembly_polished
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific).view()
+.map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
     CONTAMINATION_DETECTION(
-    ch_samplesheet.bam)     // Channel: [meta, fasta, bam]
+    ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
+    )
+
+    BLOBTOOLS(
+    ch_contamination_detection_input.mix(ch_samplesheet.bam),
+    CONTAMINATION_DETECTION.out.blobtools_taxonomy)
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
 

@@ -26,18 +26,8 @@ workflow CONTAMINATION_DETECTION {
             )
         }
 
-
-
-
     // Run Tiara classification
     TIARA_TIARA(ch_tiara)
-
-    // Prepare input for FCS-GX: use per-sample taxon_id from metadata, fall back to global params.taxid
-
-    //ch_fcs_gx = ch_samplesheet.map { meta, assembly ->
-    //    def taxid = meta.taxon_id ?: params.taxid
-    //    [meta, taxid, assembly]
-
 
     // Run FCS-GX contamination screening
     FCSGX_RUNGX(ch_fcsgx, params.db_path, params.ramdisk_path ?:[])
@@ -55,4 +45,5 @@ workflow CONTAMINATION_DETECTION {
     tiara_classifications  = TIARA_TIARA.out.classifications
     taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report
     fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted
+    blobtools_taxonomy     = COMPARISON.out.blobtools_taxonomy
 }

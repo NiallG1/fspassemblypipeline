@@ -1,4 +1,4 @@
-include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
+include { FASTK_FASTK as FASTK_ASM                         } from '../../../modules/nf-core/fastk/fastk/main'
 include { RENAME_ASSEMBLIES                                } from '../../../modules/local/rename_assemblies/main'
 include { BUSCO_BUSCO                                      } from '../../../modules/nf-core/busco/busco/main'
 include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
@@ -28,7 +28,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     main:
 
 
-    FASTK_FASTK  ( ch_fastp_reads )
+    FASTK_ASM  ( ch_fastp_reads )
 
 // =================== Draft assemblies QC =======================
 
@@ -94,7 +94,7 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     // input channel for the first input required by merquryfk: tuple val(meta) , path(fastk_hist), path(fastk_ktab), path(assembly), path(haplotigs)
     // to obtain this:
     // 1. join fastk hist and ktab in a single list and map to meta.id to be use as key to then join with the assemblies
-    def ch_combined_fastk = FASTK_FASTK.out.hist.join(FASTK_FASTK.out.ktab, by: 0).map { meta, hist, ktab -> [ meta.id, hist, ktab ] }
+    def ch_combined_fastk = FASTK_ASM.out.hist.join(FASTK_ASM.out.ktab, by: 0).map { meta, hist, ktab -> [ meta.id, hist, ktab ] }
     // 2. map renamed assemblies to original meta.id (to be used as key to then join with combined fastk results)
     def ch_draft_assemblies_mapped_to_id = RENAME_ASSEMBLIES.out.renamed_assemblies.map { meta, renamed_assembly -> [ meta.id, meta, renamed_assembly ]}
     // 3. join combined fastk with renamed assemblies using meta.id as key
@@ -297,8 +297,8 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     emit:
     // Fastk outputs (needed as input for merquryfk)
-    fastk_ktab                                           = FASTK_FASTK.out.ktab
-    fastk_hist                                           = FASTK_FASTK.out.hist
+    fastk_ktab                                           = FASTK_ASM.out.ktab
+    fastk_hist                                           = FASTK_ASM.out.hist
 
     // Draft assemblies QC
     renamed_assemblies                                   = RENAME_ASSEMBLIES.out.renamed_assemblies

@@ -371,8 +371,7 @@
             "default": "Scaffold 1 g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
         },
         "db_path": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/pipeline/gx_test_db/test-only"
+            "type": "string"
         },
         "ramdisk_path": {
             "type": "string"
@@ -443,6 +442,13 @@
         "masurca_jf_size": {
             "type": "integer",
             "default": 300000000
+        },
+        "taxdump": {
+            "type": "string"
+        },
+        "min_contig_size": {
+            "type": "integer",
+            "default": 1000
         }
     }
 }
