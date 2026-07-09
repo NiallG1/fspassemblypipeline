@@ -100,8 +100,8 @@ workflow FSPASSEMBLYPIPELINE {
     )
 
     BLOBTOOLS(
-    ch_samplesheet.bam,
-    CONTAMINATION_DETECTION.out.blobtools_taxonomy)     // Channel: [meta, fasta, bam]
+    ch_contamination_detection_input.mix(ch_samplesheet.bam),
+    CONTAMINATION_DETECTION.out.blobtools_taxonomy)
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
 
