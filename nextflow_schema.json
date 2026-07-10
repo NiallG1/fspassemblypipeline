@@ -318,7 +318,8 @@
             "default": "fungi_odb12"
         },
         "busco_lineages_path": {
-            "type": "string"
+            "type": "string",
+            "default": "/home/lobinu/git_repos/fspassemblypipeline/data"
         },
         "busco_config_file": {
             "type": "string"
@@ -370,8 +371,7 @@
             "default": "Scaffold 1 g 10 LD 0 NodeCovTh 1 EdgeCovTh 0"
         },
         "db_path": {
-            "type": "string",
-            "default": "/home/nga10kg/FSP/pipeline/gx_test_db/test-only"
+            "type": "string"
         },
         "ramdisk_path": {
             "type": "string"
@@ -381,7 +381,8 @@
             "default": "odb12"
         },
         "lineages_list_file": {
-            "type": "string"
+            "type": "string",
+            "default": "./assets/fungi_busco_lineages.txt"
         },
         "skip_manual_strategy": {
             "type": "boolean"
@@ -414,6 +415,40 @@
         "use_merged_reads": {
             "type": "boolean",
             "default": true
+        },
+        "pypolca_extra_args": {
+            "type": "string",
+            "default": "--careful"
+        },
+        "skip_masurca": {
+            "type": "boolean"
+        },
+        "masurca_fragment_mean": {
+            "type": "integer",
+            "default": 100
+        },
+        "masurca_fragment_stdev": {
+            "type": "integer",
+            "default": 50
+        },
+        "masurca_kmer_size": {
+            "type": "string",
+            "default": "auto"
+        },
+        "masurca_ca_parameters": {
+            "type": "string",
+            "default": "cgwErrorRate=0.15"
+        },
+        "masurca_jf_size": {
+            "type": "integer",
+            "default": 300000000
+        },
+        "taxdump": {
+            "type": "string"
+        },
+        "min_contig_size": {
+            "type": "integer",
+            "default": 1000
         }
     }
 }

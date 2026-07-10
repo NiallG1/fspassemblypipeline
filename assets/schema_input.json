@@ -40,6 +40,13 @@
                 "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.f(ast)?a\\.gz$",
                 "errorMessage": "Fasta file for BAM input must be provided, cannot contain spaces and must have extension '.fa.gz' or '.fasta.gz'"
             },
+            "busco": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^([\\S\\s]*\\/)?[^\\s\\/]+\\.tsv$",
+                "errorMessage": "This is the table that stores the full BUSCO results"
+            },
             "taxid": {
                 "type": "integer",
                 "errorMessage": "Species TaxiID for decontamination screening, must be a valid NCBI Taxonomy ID (positive integer)",
