@@ -31,6 +31,7 @@ process GETSEQKITK {
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
     """
+    echo "21" > ${prefix}_seqkit_kmer.txt
     touch ${prefix}_seqkit_kmer.txt
     """
 }
