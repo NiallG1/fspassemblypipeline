@@ -4,14 +4,17 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { GENOME_ASSEMBLY        } from '../subworkflows/local/genome_assembly/main'
-include { PREPROCESSING          } from '../subworkflows/local/preprocessing/main'
-include { CONTAMINATION_DETECTION} from '../subworkflows/local/contamination_detection/main'
-include { MULTIQC                } from '../modules/nf-core/multiqc/main'
-include { paramsSummaryMap       } from 'plugin/nf-schema'
-include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
+include { PREPROCESSING               } from '../subworkflows/local/preprocessing/main'
+include { GENOME_ASSEMBLY             } from '../subworkflows/local/genome_assembly/main'
+include { GENOME_ASSEMBLY_MERGED      } from '../subworkflows/local/genome_assembly_merged/main'
+include { SELECT_BEST_ASSEMBLY_AND_QC } from '../subworkflows/local/select_best_assembly_and_qc/main'
+include { CONTAMINATION_DETECTION     } from '../subworkflows/local/contamination_detection/main'
+include { BLOBTOOLS                   } from '../subworkflows/local/blobtools/main'
+include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
+include { paramsSummaryMap            } from 'plugin/nf-schema'
+include { paramsSummaryMultiqc        } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML      } from '../subworkflows/nf-core/utils_nfcore_pipeline'
+include { methodsDescriptionText      } from '../subworkflows/local/utils_nfcore_fspassemblypipeline_pipeline'
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -28,6 +31,12 @@ workflow FSPASSEMBLYPIPELINE {
     outdir
 
     main:
+
+    // Validate assembly mode selection
+    if (!params.use_paired_reads && !params.use_merged_reads) {
+        error "ERROR: At least one assembly mode must be enabled. " +
+              "Set --use_paired_reads true or --use_merged_reads true"
+    }
 
     ch_versions = channel.empty()
     ch_multiqc_files = channel.empty()
@@ -54,13 +63,45 @@ workflow FSPASSEMBLYPIPELINE {
             no_taxonomy: !ranks // Do not run assembly if no taxonomy information is given
         }
 
-    GENOME_ASSEMBLY (
-        ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
+    // Initialise assembly output channels as empty
+    def ch_draft_assemblies_paired = channel.empty()
+    def ch_draft_assemblies_merged = channel.empty()
+
+    // Conditional: Run paired-end assembly workflow
+    if (params.use_paired_reads) {
+        GENOME_ASSEMBLY(
+            ch_samplesheet_raw.taxonomy.mix(ch_samplesheet.cleaned)
+        )
+        ch_draft_assemblies_paired = GENOME_ASSEMBLY.out.draft_assemblies_paired
+    }
+
+    // Conditional: Run merged reads assembly workflow
+    if (params.use_merged_reads) {
+        GENOME_ASSEMBLY_MERGED(
+            PREPROCESSING.out.fastp_reads_merged,
+            PREPROCESSING.out.fastp_reads_unmerged,
+            PREPROCESSING.out.fastp_reads
+        )
+        ch_draft_assemblies_merged = GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged
+    }
+
+    SELECT_BEST_ASSEMBLY_AND_QC(
+        ch_draft_assemblies_paired,
+        ch_draft_assemblies_merged,
+        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
     )
 
-
+    ch_contamination_detection_input = SELECT_BEST_ASSEMBLY_AND_QC.out.best_assembly_polished
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific).view()
+.map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
     CONTAMINATION_DETECTION(
-    ch_samplesheet.bam)     // Channel: [meta, fasta, bam]
+    ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
+    )
+
+    BLOBTOOLS(
+    ch_contamination_detection_input.mix(ch_samplesheet.bam),
+    CONTAMINATION_DETECTION.out.blobtools_taxonomy)
 
     // ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]})
 

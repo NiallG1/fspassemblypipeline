@@ -105,12 +105,16 @@ workflow PIPELINE_INITIALISATION {
     channel
         .fromList(samplesheetToList(input, "${projectDir}/assets/schema_input.json"))
         .map {
-            meta, file_1, file_2, fasta ->
+            // file 1 can be either fastq or bam, while file 2 can only be fastq (R2)
+            meta, file_1, file_2, fasta, busco ->
                 if ( meta.type == 'bam') {
-                    return [ meta.id, meta, [ fasta, file_1 ] ]
+                    // if type is bam the structure of the samplesheet must be: sample_id, fasta file, bam file, busco full table
+                    return [ meta.id, meta, [ fasta, file_1, busco ] ]
                 } else if (!file_2) {
+                    // if file 2 (_R2.fq.gz) is not given, expect only file_1 (_R1.fq.gz, single end)
                     return [ meta.id, meta + [ single_end:true ], [ file_1 ] ]
                 } else {
+                    // otherwise, samplesheet expects both paired end files (R1, R2)
                     return [ meta.id, meta + [ single_end:false ], [ file_1, file_2 ] ]
                 }
         }

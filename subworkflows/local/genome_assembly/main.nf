@@ -1,9 +1,7 @@
 include { SEQKIT_STATS                                     } from '../../../modules/nf-core/seqkit/stats/main'
 include { GETSEQKITK                                       } from '../../../modules/local/getseqkitk/main'
-// include { SEQKIT_STATS as SEQKIT_STATS_MERGED  } from '../../../modules/nf-core/seqkit/stats/main' I can't work on this if the preprocessing subworkflow is not updated to ouput merged reads.
 include { KMERGENIE                                        } from '../../../modules/nf-core/kmergenie/main'
 include { GETKMERGENIEK                                    } from '../../../modules/local/getkmergeniek/main'
-include { FASTK_FASTK                                      } from '../../../modules/nf-core/fastk/fastk/main'
 include { SPADES as SPADES_MANUAL                          } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_KMERGENIE                       } from '../../../modules/nf-core/spades/main'
 include { SPADES as SPADES_READS_LENGTH                    } from '../../../modules/nf-core/spades/main'
@@ -19,11 +17,9 @@ include { ABYSS_ABYSSPE as ABYSS_READS_LENGTH              } from '../../../modu
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_MANUAL        } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_KMERGENIE     } from '../../../modules/local/sparseassembler/main'
 include { SPARSEASSEMBLER as SPARSEASSEMBLER_READS_LENGTH  } from '../../../modules/local/sparseassembler/main'
-include { RENAME_ASSEMBLIES                                } from '../../../modules/local/rename_assemblies/main'
-include { BUSCO_BUSCO                                      } from '../../../modules/nf-core/busco/busco/main'
-include { BUSCO_BUSCO as BUSCO_SPECIFIC                    } from '../../../modules/nf-core/busco/busco/main'
-include { MERQURYFK_MERQURYFK                              } from '../../../modules/nf-core/merquryfk/merquryfk/main'
-include { QUAST                                            } from '../../../modules/nf-core/quast/main'
+include { MASURCA as MASURCA_MANUAL                        } from '../../../modules/local/masurca/main'
+include { MASURCA as MASURCA_KMERGENIE                     } from '../../../modules/local/masurca/main'
+include { MASURCA as MASURCA_READS_LENGTH                  } from '../../../modules/local/masurca/main'
 include {createAssemblyMeta                                } from '../utils_nfcore_fspassemblypipeline_pipeline/main'
 
 workflow GENOME_ASSEMBLY {
@@ -39,7 +35,7 @@ workflow GENOME_ASSEMBLY {
         tuple(new_meta, reads)
     }
 
-    FASTK_FASTK  ( ch_paired_reads )
+
 
 // ==================== K-mer strategies for genome assembly =======================
 
@@ -440,101 +436,111 @@ workflow GENOME_ASSEMBLY {
         }
     }
 
+    // ======= Masurca assemblies - nested conditionals (assembler × strategy) ======
+    // Masurca is only run if skip_masurca is false. Within that, each strategy is only run if its corresponding skip parameter is false.
+    // The channel with Masurca assemblies is populated accordingly and mixed into the common ch_draft_assemblies_input channel.
+    // Masurca needs a tuple with 4 elements as inputs, so we need to map the channel to add empty lists for the other 3 inputs (see PREPROCESSING subworkflow for example)
+    // MASURCA: [ meta, illumina, jump, pacbio, nanopore ]
 
-// =================== Draft assemblies QC =======================
+    if (!params.skip_masurca) {
 
-    RENAME_ASSEMBLIES ( ch_draft_assemblies_input )
+        if (!params.skip_manual_strategy) {
+            MASURCA_MANUAL(
+                ch_manual_strategy.map { meta, reads -> [meta, reads, [], [], []] },
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                params.masurca_kmer_size,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
 
-    BUSCO_BUSCO ( RENAME_ASSEMBLIES.out.renamed_assemblies, params.busco_mode, params.busco_lineage, params.busco_lineages_path ?:[], params.busco_config_file ?:[], params.busco_clean_intermediates )
-
-    // Map samples to their best BUSCO database based on taxonomy
-    // BUSCO_SPECIFIC runs BUSCO with a specific lineage for each sample. The lineage is determined based on the sample metadata and the list of available lineages.
-    // we attempt to find the most specific available BUSCO database for each sample by walking down the taxonomic hierarchy (family → order → class → phylum).
-    // If no matching database is found at any level, we fall back to the lineage specified by params.busco_lineage.
-
-    // Load BUSCO lineages once
-    def busco_lineages_file = file(params.lineages_list_file)
-
-    def busco_lineages = busco_lineages_file
-        .readLines() as Set
-
-    def ext = "_${params.busco_db_extension}"
-    def fallback = params.busco_lineage
-
-    // Add lineage to each sample and split into synchronized channels
-    ch_assemblies_with_lineage = RENAME_ASSEMBLIES.out.renamed_assemblies
-        .map { meta, assembly ->
-            // Find best matching lineage for this sample
-            def lineage = ['family', 'order', 'class', 'phylum']
-                .findResult { level ->
-                    def taxon = meta[level]
-                    if (!taxon) {
-                        log.info "  ${level}: not set"
-                        return null
-                    }
-                    def candidate = "${taxon.toLowerCase()}${ext}".toString()
-                    def found = candidate in busco_lineages
-                    found ? candidate : null
-                } ?: fallback
-
-            // Return tuple with lineage for splitting
-            tuple(meta, assembly, lineage)
-        }
-        .multiMap { meta, assembly, lineage ->
-            assemblies: tuple(meta, assembly)
-            lineages: lineage
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_MANUAL.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
+            )
         }
 
-    // Specific BUSCO with per-sample lineage
-    BUSCO_SPECIFIC(
-        ch_assemblies_with_lineage.assemblies,
-        params.busco_mode,
-        ch_assemblies_with_lineage.lineages,
-        params.busco_lineages_path ?: [],
-        params.busco_config_file ?: [],
-        params.busco_clean_intermediates
-    )
+        if (!params.skip_kmergenie_strategy) {
 
+            // Create k-mer channel for Masurca (needs single kmer value) using multiMap
+            ch_masurca_kmergenie = ch_kmergenie_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [], [], [] ]
+                    single_kmer: meta.single_kmer
+                }
 
+            MASURCA_KMERGENIE(
+                ch_masurca_kmergenie.input,
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                ch_masurca_kmergenie.single_kmer,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
 
-    // input channel for the first input required by merquryfk: tuple val(meta) , path(fastk_hist), path(fastk_ktab), path(assembly), path(haplotigs)
-    // to obtain this:
-    // 1. join fastk hist and ktab in a single list and map to meta.id to be use as key to then join with the assemblies
-    def ch_combined_fastk = FASTK_FASTK.out.hist.join(FASTK_FASTK.out.ktab, by: 0).map { meta, hist, ktab -> [ meta.id, hist, ktab ] }
-    // 2. map renamed assemblies to original meta.id (to be used as key to then join with combined fastk results)
-    def ch_draft_assemblies_mapped_to_id = RENAME_ASSEMBLIES.out.renamed_assemblies.map { meta, renamed_assembly -> [ meta.id, meta, renamed_assembly ]}
-    // 3. join combined fastk with renamed assemblies using meta.id as key
-    def ch_merquryfk_input = ch_combined_fastk.combine( ch_draft_assemblies_mapped_to_id, by: 0 ).map { sample_id, hist, ktab, meta, assembly -> [ meta, hist, ktab, assembly, [] ] }
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_KMERGENIE.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
+            )
+        }
 
-    MERQURYFK_MERQURYFK ( ch_merquryfk_input, [[],[]], [[],[]] ) // no mathernal and pathernal haplotypes for trio mode
+        if (!params.skip_reads_length_strategy) {
 
-    // input channel for quast: I want to run quast once per sample, so I have to group the different assemblies per sample name
-    // ch_draft_assemblies_mapped_to_id is: [ sample_id, meta, assembly ]
-    // groupTuple(by: 0) groups by position 0 (sample_id)
-    // Result: [ sample_id, [meta1, meta2, meta3], [assembly1, assembly2, assembly3] ]
-    def ch_quast_input = ch_draft_assemblies_mapped_to_id.groupTuple( by: 0 ).map { sample_id, metas, assemblies -> [ [id: sample_id], assemblies ]}
+            // Create k-mer channel for Masurca (needs single kmer value) using multiMap
+            ch_masurca_reads_length = ch_reads_length_strategy
+                .multiMap { meta, reads ->
+                    input:      [ meta, reads, [], [], [] ]
+                    single_kmer: meta.single_kmer
+                }
 
-    QUAST ( ch_quast_input,[[],[]], [[],[]] ) // no reference fasta or gff for quast
+            MASURCA_READS_LENGTH(
+                ch_masurca_reads_length.input,
+                params.masurca_fragment_mean,
+                params.masurca_fragment_stdev,
+                0, // no jump reads fragment mean
+                0,  // no jump reads fragment stdev
+                0, // no extend jump reads
+                ch_masurca_reads_length.single_kmer,
+                0, // no linking mates
+                25, // lhe_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for nanopore reads
+                0, // mega_reads_one_pass: 0 is default - two passes of mega-reads for slower, but higher quality assembly
+                300, // limit_jump_coverage - leaving default value for config compatibility, but it's not used as this should be a parameter used for jump reads
+                params.masurca_ca_parameters, // cgwErrorRate
+                1, // do attempt to close gaps (we can leave this hardcoded)
+                params.masurca_jf_size
+            )
+
+            // Mix into draft assemblies channel with new meta
+            ch_draft_assemblies_input = ch_draft_assemblies_input.mix(
+                MASURCA_READS_LENGTH.out.scaffolds
+                    .map { meta, scaffolds -> createAssemblyMeta(meta, scaffolds, 'masurca') }
+            )
+        }
+    }
 
     emit:
-    // Fastk outputs (unconditional processes, it's needed as input for merquryfk)
-    fastk_ktab                                  = FASTK_FASTK.out.ktab
-    fastk_hist                                  = FASTK_FASTK.out.hist
-
-    // K-mer strategy outputs
+    // K-mer strategy outputs - might be useful to collect results downstream
     seqkit_stats                                = ch_seqkit_stats
     getseqkitk_kmer                             = ch_getseqkitk_kmer
-    kmergenie_html                              = ch_kmergenie_html
     getkmergeniek_k                             = ch_getkmergeniek_k
-
-    // Downstream outputs (unconditional processes)
-    renamed_assemblies                          = RENAME_ASSEMBLIES.out.renamed_assemblies
-    busco_batch_summary                         = BUSCO_BUSCO.out.batch_summary
-    busco_short_summaries_txt                   = BUSCO_BUSCO.out.short_summaries_txt
-    busco_full_table                            = BUSCO_BUSCO.out.full_table
-    busco_batch_summary_specific                = BUSCO_SPECIFIC.out.batch_summary
-    busco_short_summaries_txt_specific          = BUSCO_SPECIFIC.out.short_summaries_txt
-    busco_full_table_specific                   = BUSCO_SPECIFIC.out.full_table
-    merquryfk_completeness_stats                = MERQURYFK_MERQURYFK.out.stats
-    quast_results                               = QUAST.out.results
+    // Assemblies - all assemblers and strategies mixed into one channel
+    draft_assemblies_paired = ch_draft_assemblies_input
 }

@@ -51,7 +51,7 @@ def build_output_row(row):
     note = ""
 
     if peak1_fit_max < 60 and peak2_fit_max < 60:
-        shape = "NA"
+        shape = "L-shape"
         est_size = "NA"
         peak_position = "NA"
         note = "uncertain"

@@ -157,6 +157,7 @@ workflow PREPROCESSING {
     emit:
     fastp_reads            = FASTP_TRIM.out.reads  // complete trimmed R1 && R2
     fastp_reads_merged     = FASTP_MERGE.out.reads_merged
+    fastp_reads_unmerged   = FASTP_MERGE.out.reads         // unmerged after merge attempt
     falco_raw_html         = FALCO_RAW.out.html
     falco_after_fastp_html = FALCO_AFTER_FASTP.out.html
     falco_after_merge_html = FALCO_AFTER_MERGE.out.html
