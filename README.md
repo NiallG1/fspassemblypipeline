@@ -21,17 +21,69 @@
 
 ## Introduction
 
-**nf-core/fspassemblypipeline** is a bioinformatics pipeline that ...
+**RBGKew/fspassemblypipeline** is a bioinformatics pipeline that 
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+- preprocesses raw illumina reads
+- produces analysis for the quality assessment of the raw reads
+- assemble illumina reads from the same library using multiple assemblers and settings
+- quality assesses the assemblies and selects the best one among those produced
+- detects contaminants and produces all the inputs necessary for decontamination from the best selected assembly
+
+The workflow was primarily developed to process historical fungal samples. It may be useful to researchers dealing with difficult samples as the FSP, or who want to find the best short reads assembler(s) for their own case.
+
 
 <!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/workflow-schematics#examples for examples.   -->
+     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/win Snakemake orkflow-schematics#examples for examples.   -->
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+
+### Preprocessing
+
+### Genome assembly
+
+Each sample is assembled using the following assemblers:
+
+- [SPAdes](https://github.com/ablab/spades) - multi k-mer assembler
+- [MEGAHIT](https://github.com/voutcn/megahit) - multi k-mer assembler
+- [AbySS](https://github.com/bcgsc/abyss) - single k-mer assembler
+- [SparseAssembler](https://github.com/yechengxi/SparseAssembler) - single k-mer assembler
+- [Minia](https://github.com/GATB/minia?tab=readme-ov-file) - single k-mer assembler
+- [MaSuRCA](https://github.com/alekseyzimin/masurca/tree/master) - single k-mer assembler
+
+The user can choose which assemblers to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+The user can choose between three different strategies to set the k-mer size for the genome assembly process:
+
+1. `manual`: the k-mer size is set manually for each assembler in the [config.yml](config/config.yml).
+2. `kmergenie`: [KMerGenie](https://github.com/movingpictures83/KMerGenie) is used to estimate the best k-mer size for genome assembly for each library. Note that KMerGenie should be used with haploid or diploid genomes only.
+3. `reads_length`: [SeqKit](https://bioinf.shenwei.me/seqkit/) is used to calculate the median reads length and the k-mer size is set to be 2/3rds of the median.
+
+The user can choose which k-mer strategues to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+Furthermore, the user can choose to use two different input reads:
+
+1. forward and reverse reads files
+2. merged reads
+
+The user can choose which k-mer strategues to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+**Important note: if the user wishes to use merged reads, running the pre-processing step is mandatory.**
+
+The assemblies produced by each assembler for each sample using different settings are then quality inspected with the following tools:
+
+- [BUSCO](https://busco.ezlab.org/busco_userguide.html) - evaluates each produced assembly quality in terms of expected gene content. It is run twice for each sample, once using a general dataset, and once using a more closely related dataset. See [`config/README.md`](config/README.md) for more details.
+- [QUAST](https://quast.sourceforge.net/docs/manual.html) - computes assembly statistics.
+- [MerquryFK](https://github.com/thegenemyers/MERQURY.FK) - computes k-mer analysis for each assembly and compares its content with the k-mer computed for raw reads by [FastK](https://github.com/thegenemyers/FASTK).
+
+The best assembly for each sample is then selected. The selection is based on the highest complete and single BUSCO content (absolute number, not percentage), using the busco closest busco lineage to the sample's taxonomy. If more than one assembly have the highest complete and single copy BUSCO score, the assembly with the highest aUN (calculated by QUAST) among those is selected.
+
+The best assembly is then handed over to [pypolca](https://github.com/gbouras13/pypolca), to improve the assembly by performing substitution, insertion, and deletion errors correction.
+
+The improved best assembly is then quality assessed again with BUSCO, QUAST, and MerquryFK, and aligned back to the reads with [bwa-mem2](https://github.com/bwa-mem2/bwa-mem2) and [samtools](https://github.com/samtools/samtools), which is also used to analyse the genome coverage.
+
+
+A standalone implementation in Snakemake of this part of the pipeline is available at https://github.com/LiaOb21/FSP_assembly_benchmarking. 
+
+### Contamination detection
 
 ## Usage
 
