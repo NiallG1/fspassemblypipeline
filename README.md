@@ -21,17 +21,19 @@
 
 ## Introduction
 
-**nf-core/fspassemblypipeline** is a bioinformatics pipeline that ...
-
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+**nf-core/fspassemblypipeline** is a comprehensive bioinformatics pipeline for fungal genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple kmer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium).
 
 <!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
      workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/workflow-schematics#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+
+## Pipeline steps
+
+1. Read QC ([`Falco`](https://github.com/smithlabcode/falco) and [`MultiQC`](http://multiqc.info/))
+2. Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging)
+3. K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`] (https://github.com/thegenemyers/GENESCOPE.FK))
+3. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler))
+4. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
+5. Contamination detection and filtering ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx), [`BlobTools`](https://github.com/drl/blobtools))
 
 ## Usage
 
@@ -120,6 +122,36 @@ nextflow run nf-core/fspassemblypipeline \
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
 
+## Preprocessing subworkflow
+
+The preprocessing subworkflow is implemented in `subworkflows/local/preprocessing/main.nf` and is exposed for local debugging via `preprocessing_only.nf`.
+It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
+
+### Overview
+
+The preprocessing subworkflow runs the following steps:
+- `FALCO` raw read QC
+- `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
+- `fastp` merge of trimmed reads with merged and unmerged outputs
+- `FALCO` QC on trimmed and merged reads
+- Falco QC statistics compilation across raw, trimmed, and merged stages
+- `FQSTAT` read statistics and summary report generation
+- `FASTK` k-mer histogram generation
+- `GENESCOPEFK` k-mer profile summarization
+- final k-mer summary table generation
+
+### Required inputs
+
+The subworkflow accepts an input samplesheet via `--input`.
+It supports raw paired-end reads files that end in .fq.gz.
+
+Optional inputs:
+- `--fastp_adapter_fasta path/to/adapters.fa` for custom adapter sequences
+
+### Run the certain subworkflows only
+
+This is a useful entrypoint for running only the preprocessing stage independently or for local debugging.
+
 For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/fspassemblypipeline/usage) and the [parameter documentation](https://nf-co.re/fspassemblypipeline/parameters).
 
 ## Pipeline output
@@ -133,8 +165,6 @@ For more details about the output files and reports, please refer to the
 nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
-
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
 
 ## Contributions and Support
 
