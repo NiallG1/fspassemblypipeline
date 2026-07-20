@@ -1,7 +1,7 @@
 <h1>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/rbgkew-fspassemblypipeline_logo_dark.png">
-    <img alt="rbgkew/fspassemblypipeline" src="docs/images/rbgkew-fspassemblypipeline_logo_ligth.png">
+    <img alt="nf-core/fspassemblypipeline" src="docs/images/rbgkew-fspassemblypipeline_logo_light.png">
   </picture>
 </h1>
 
