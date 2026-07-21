@@ -1,7 +1,7 @@
 <h1>
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/nf-core-fspassemblypipeline_logo_dark.png">
-    <img alt="nf-core/fspassemblypipeline" src="docs/images/nf-core-fspassemblypipeline_logo_light.png">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/rbgkew-fspassemblypipeline_logo_dark.png">
+    <img alt="RBGKew/fspassemblypipeline" src="docs/images/rbgkew-fspassemblypipeline_logo_light.png">
   </picture>
 </h1>
 
@@ -21,19 +21,105 @@
 
 ## Introduction
 
-**nf-core/fspassemblypipeline** is a comprehensive bioinformatics pipeline for fungal genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple kmer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium).
+**RBGKew/fspassemblypipeline** is a comprehensive bioinformatics pipeline genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple k-mer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium), but it can be used for any paired-end Illumina data.
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/workflow-schematics#examples for examples.   -->
+![metromap](docs/images/metro_map_fsp.svg)
 
 ## Pipeline steps
 
-1. Read QC ([`Falco`](https://github.com/smithlabcode/falco) and [`MultiQC`](http://multiqc.info/))
-2. Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging)
-3. K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`] (https://github.com/thegenemyers/GENESCOPE.FK))
-3. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler))
-4. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
-5. Contamination detection and filtering ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx), [`BlobTools`](https://github.com/drl/blobtools))
+1. Read QC ([`Falco`](https://github.com/smithlabcode/falco), Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging), K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`](https://github.com/thegenemyers/GENESCOPE.FK))
+2. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler)) and [MaSuRCA](https://github.com/alekseyzimin/masurca/tree/master)
+3. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK), selection of the best assembly, polishing of the selected assembly and final QC for polished assembly
+4. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx))
+5. Creation of blobtools directory ready for contamination removal ([`BlobTools`](https://github.com/drl/blobtools))
+
+### Preprocessing
+
+The preprocessing subworkflow is implemented in `subworkflows/local/preprocessing/main.nf`.
+It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
+
+The preprocessing subworkflow runs the following steps:
+
+- `FALCO` raw read QC
+- `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
+- `fastp` merge of trimmed reads with merged and unmerged outputs
+- `FALCO` QC on trimmed and merged reads
+- Falco QC statistics compilation across raw, trimmed, and merged stages
+- `FQSTAT` read statistics and summary report generation
+- `FASTK` k-mer histogram generation
+- `GENESCOPEFK` k-mer profile summarization
+- final k-mer summary table generation
+
+### Genome assembly
+
+The genome assembly part of the pipeline is divided in three subworkflows:
+
+1. `subworkflows/local/genome_assembly/main.nf`, where paired end reads are processed by the assemblers
+2. `subworkflows/local/genome_assembly_merged/main.nf`, where merged reads are processed by the assemblers
+3. `subworkflows/local/select_best_assembly_and_qc/main.nf`, where the draft assemblies are quality assessed, the best one is selected for polishing and is quality assessed again.
+
+Each sample is assembled using the following assemblers:
+
+- [SPAdes](https://github.com/ablab/spades) - multi k-mer assembler
+- [MEGAHIT](https://github.com/voutcn/megahit) - multi k-mer assembler
+- [AbySS](https://github.com/bcgsc/abyss) - single k-mer assembler
+- [SparseAssembler](https://github.com/yechengxi/SparseAssembler) - single k-mer assembler
+- [Minia](https://github.com/GATB/minia?tab=readme-ov-file) - single k-mer assembler
+- [MaSuRCA](https://github.com/alekseyzimin/masurca/tree/master) - single k-mer assembler
+
+The user can choose which assemblers to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+The user can choose between three different strategies to set the k-mer size for the genome assembly process:
+
+1. `manual`: the k-mer size is set manually for each assembler in the [config.yml](config/config.yml).
+2. `kmergenie`: [KMerGenie](https://github.com/movingpictures83/KMerGenie) is used to estimate the best k-mer size for genome assembly for each library. Note that KMerGenie should be used with haploid or diploid genomes only.
+3. `reads_length`: [SeqKit](https://bioinf.shenwei.me/seqkit/) is used to calculate the median reads length and the k-mer size is set to be 2/3rds of the median.
+
+The user can choose which k-mer strategues to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+Furthermore, the user can choose to use two different input reads:
+
+1. forward and reverse reads files
+2. merged reads
+
+The user can choose which reads type to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+
+**Important note: if the user wishes to use merged reads, running the pre-processing step is mandatory.**
+
+The assemblies produced by each assembler for each sample using different settings are then quality inspected with the following tools:
+
+- [BUSCO](https://busco.ezlab.org/busco_userguide.html) - evaluates each produced assembly quality in terms of expected gene content. It is run twice for each sample, once using a general dataset, and once using a more closely related dataset. See [`config/README.md`](config/README.md) for more details.
+- [QUAST](https://quast.sourceforge.net/docs/manual.html) - computes assembly statistics.
+- [MerquryFK](https://github.com/thegenemyers/MERQURY.FK) - computes k-mer analysis for each assembly and compares its content with the k-mer computed for raw reads by [FastK](https://github.com/thegenemyers/FASTK).
+
+The best assembly for each sample is then selected. The selection is based on the highest complete and single BUSCO content (absolute number, not percentage), using the taxonomically closest busco lineage to the sample's species. If more than one assembly have the highest complete and single copy BUSCO score, the assembly with the highest aUN (calculated by QUAST) among those is selected.
+
+The best assembly is then handed over to [pypolca](https://github.com/gbouras13/pypolca), to improve the assembly by performing substitution, insertion, and deletion errors correction.
+
+The improved best assembly is then quality assessed again with BUSCO, QUAST, and MerquryFK, and aligned back to the reads with [bwa-mem2](https://github.com/bwa-mem2/bwa-mem2) and [samtools](https://github.com/samtools/samtools), which is also used to analyse the genome coverage.
+
+A standalone implementation in Snakemake of this part of the pipeline is available at https://github.com/LiaOb21/FSP_assembly_benchmarking.
+
+### Contamination detection
+
+The contamination detection part of the pipeline is divided in two subworkflows:
+
+1. `subworkflows/local/contamination_detection/main.nf`, which runs FCS-GX and Tiara for taxanomic labelling of contigs and scaffolds and reformats the FCS-GX output for processing
+2. `subworkflows/local/blobtools/main.nf`, which creates a yaml file for each sample and produces a blob directory ready for decontamination
+
+The contamination detection subworkflow runs the following steps:
+
+- `Tiara` assigns domain level taxonomy and organelle/motrochondrial DNA labels to contigs.
+- `FCS-GX` Assigns species level taxonomy to contigs.
+- `convertrpt` Reformats output of FCS-GX for downstream processing.
+- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot.
+
+The blobtools subworkflow takes the taxonomic labels created in the contamination_detection subworkflow and the GC content and coverage information and
+plots this on a graph allowing for visualisation of contamination. It runs the following steps:
+
+- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot.
+- `SAMTOOLS_CSI` Indexes the .bam files to produce .bam.csi files as required by blobtools.
+- `blobtoolkit_create` Creates the blobdir from the output of contamination detection and the provided samplesheet.
 
 ## Usage
 
@@ -41,6 +127,24 @@
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.
 
 ### Required inputs
+
+#### Samplesheet
+
+<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
+     Explain what rows and columns represent. For instance (please edit as appropriate):
+
+First, prepare a samplesheet with your input data that looks as follows:
+
+`samplesheet.csv`:
+
+```csv
+sample,fastq_1,fastq_2
+CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+```
+
+Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
+
+-->
 
 #### Pre-dowloaded BUSCO lineages
 
@@ -90,21 +194,7 @@ We also need to provide the path to where busco lineages are downloaded in `next
 
 Note that BUSCO automatically downloads lineages in a directory called `lineages`. In `nextflow.config` we need to provide the path to the parent directory of `lineages`. This needs to be the full absolute path.
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
-
-First, prepare a samplesheet with your input data that looks as follows:
-
-`samplesheet.csv`:
-
-```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-```
-
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
+#### FCS-GX database
 
 ### Run the pipeline
 
@@ -121,80 +211,6 @@ nextflow run nf-core/fspassemblypipeline \
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
-
-## Preprocessing subworkflow
-
-The preprocessing subworkflow is implemented in `subworkflows/local/preprocessing/main.nf` and is exposed for local debugging via `preprocessing_only.nf`.
-It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
-
-### Overview
-
-The preprocessing subworkflow runs the following steps:
-- `FALCO` raw read QC
-- `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
-- `fastp` merge of trimmed reads with merged and unmerged outputs
-- `FALCO` QC on trimmed and merged reads
-- Falco QC statistics compilation across raw, trimmed, and merged stages
-- `FQSTAT` read statistics and summary report generation
-- `FASTK` k-mer histogram generation
-- `GENESCOPEFK` k-mer profile summarization
-- final k-mer summary table generation
-
-### Required inputs
-
-The subworkflow accepts an input samplesheet via `--input`.
-It supports raw paired-end reads files that end in .fq.gz.
-
-Optional inputs:
-- `--fastp_adapter_fasta path/to/adapters.fa` for custom adapter sequences
-
-### Run the certain subworkflows only
-
-This is a useful entrypoint for running only the preprocessing stage independently or for local debugging.
-
-For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/fspassemblypipeline/usage) and the [parameter documentation](https://nf-co.re/fspassemblypipeline/parameters).
-
-
-## Decontamination subworkflow
-
-The Decontamination subworkflow is implemented in `subworkflows/local/contamination_detection/main.nf`.
-It runs FCS-GX and Tiara for taxanomic labelling of contigs and scaffolds, reformats the FCS-GX output for processing, creates a yaml file for each sample. The output is the handed to the blobtools subworkflow.
-
-### Overview
-
-The contamination detection subworkflow runs the following steps:
-- `Tiara` assigns domain level taxonomy and organelle/motrochondrial DNA labels to contigs.
-- `FCS-GX` Assigns species level taxonomy to contigs.
-- `convertrpt` Reformats output of FCS-GX for downstream processing.
-- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot.
-- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot
-
-### Required inputs
-
-The subworkflow accepts an input samplesheet via `--input`.
-It supports genome assembly fasta files that end in .fa.gz.
-requires an installation of the FCS-GX database.
-
-Optional inputs:
-
-## blobtools subworkflow
-
-The blobtools subworkflow is implemented in `subworkflows/local/blobtools/main.nf`.
-It takes the taxonomic labels created in the contamination_detection subworkflow and the GC content and coverage information and
-plots this on a graph allowing for visualisation of contamination.
-
-### Overview
-
-The blobtools subworkflow runs the following steps:
-- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot.
-- `SAMTOOLS_CSI` Indexes the .bam files to produce .bam.csi files as required by blobtools.
-- `blobtoolkit_create` Creates the blobdir from the output of contamination detection and the provided samplesheet.
-
-### Required inputs
-
-needs a .bam coverage file and the output from contamination detection.
-
-Optional inputs:
 
 ## Pipeline output
 
