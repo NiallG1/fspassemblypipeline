@@ -1,7 +1,7 @@
 <h1>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/rbgkew-fspassemblypipeline_logo_dark.png">
-    <img alt="nf-core/fspassemblypipeline" src="docs/images/rbgkew-fspassemblypipeline_logo_light.png">
+    <img alt="RBGKew/fspassemblypipeline" src="docs/images/rbgkew-fspassemblypipeline_logo_light.png">
   </picture>
 </h1>
 
@@ -21,23 +21,47 @@
 
 ## Introduction
 
-**nf-core/fspassemblypipeline** is a comprehensive bioinformatics pipeline for fungal genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple kmer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium).
+**RBGKew/fspassemblypipeline** is a comprehensive bioinformatics pipeline genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple k-mer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium), but it can be used for any paired-end Illumina data.
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/community/brand/win Snakemake orkflow-schematics#examples for examples.   -->
+![metromap](docs/images/metro_map_fsp.svg)
+
 
 ## Pipeline steps
 
 1. Read QC ([`Falco`](https://github.com/smithlabcode/falco) and [`MultiQC`](http://multiqc.info/))
 2. Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging)
 3. K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`](https://github.com/thegenemyers/GENESCOPE.FK))
-3. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler))
-4. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
-5. Contamination detection and filtering ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx), [`BlobTools`](https://github.com/drl/blobtools))
+4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler))
+5. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
+6. Selection of the best assembly and subsequent polishing
+7. Final QC for the selected best assembly
+8. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx)) 
+9. Creation of blobtools directory for contamination removal ([`BlobTools`](https://github.com/drl/blobtools))
 
 ### Preprocessing
 
+The preprocessing subworkflow is implemented in `subworkflows/local/preprocessing/main.nf`.
+It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
+
+The preprocessing subworkflow runs the following steps:
+- `FALCO` raw read QC
+- `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
+- `fastp` merge of trimmed reads with merged and unmerged outputs
+- `FALCO` QC on trimmed and merged reads
+- Falco QC statistics compilation across raw, trimmed, and merged stages
+- `FQSTAT` read statistics and summary report generation
+- `FASTK` k-mer histogram generation
+- `GENESCOPEFK` k-mer profile summarization
+- final k-mer summary table generation
+
+
 ### Genome assembly
+
+The genome assembly part of the pipeline is divided in three subworkflows:
+
+1. `subworkflows/local/genome_assembly/main.nf`, where paired end reads are processed by the assemblers
+2. `subworkflows/local/genome_assembly_merged/main.nf`, where merged reads are processed by the assemblers
+3. `subworkflows/local/select_best_assembly_and_qc/main.nf`, where the draft assemblies are quality assessed, the best one is selected for polishing and is quality assessed again.
 
 Each sample is assembled using the following assemblers:
 
@@ -63,7 +87,7 @@ Furthermore, the user can choose to use two different input reads:
 1. forward and reverse reads files
 2. merged reads
 
-The user can choose which k-mer strategues to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+The user can choose which k-mer strategies to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
 
 **Important note: if the user wishes to use merged reads, running the pre-processing step is mandatory.**
 
@@ -73,7 +97,7 @@ The assemblies produced by each assembler for each sample using different settin
 - [QUAST](https://quast.sourceforge.net/docs/manual.html) - computes assembly statistics.
 - [MerquryFK](https://github.com/thegenemyers/MERQURY.FK) - computes k-mer analysis for each assembly and compares its content with the k-mer computed for raw reads by [FastK](https://github.com/thegenemyers/FASTK).
 
-The best assembly for each sample is then selected. The selection is based on the highest complete and single BUSCO content (absolute number, not percentage), using the busco closest busco lineage to the sample's taxonomy. If more than one assembly have the highest complete and single copy BUSCO score, the assembly with the highest aUN (calculated by QUAST) among those is selected.
+The best assembly for each sample is then selected. The selection is based on the highest complete and single BUSCO content (absolute number, not percentage), using the taxonomically closest busco lineage to the sample's species. If more than one assembly have the highest complete and single copy BUSCO score, the assembly with the highest aUN (calculated by QUAST) among those is selected.
 
 The best assembly is then handed over to [pypolca](https://github.com/gbouras13/pypolca), to improve the assembly by performing substitution, insertion, and deletion errors correction.
 
@@ -170,38 +194,6 @@ nextflow run nf-core/fspassemblypipeline \
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
-
-## Preprocessing subworkflow
-
-The preprocessing subworkflow is implemented in `subworkflows/local/preprocessing/main.nf` and is exposed for local debugging via `preprocessing_only.nf`.
-It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
-
-### Overview
-
-The preprocessing subworkflow runs the following steps:
-- `FALCO` raw read QC
-- `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
-- `fastp` merge of trimmed reads with merged and unmerged outputs
-- `FALCO` QC on trimmed and merged reads
-- Falco QC statistics compilation across raw, trimmed, and merged stages
-- `FQSTAT` read statistics and summary report generation
-- `FASTK` k-mer histogram generation
-- `GENESCOPEFK` k-mer profile summarization
-- final k-mer summary table generation
-
-### Required inputs
-
-The subworkflow accepts an input samplesheet via `--input`.
-It supports raw paired-end reads files that end in .fq.gz.
-
-Optional inputs:
-- `--fastp_adapter_fasta path/to/adapters.fa` for custom adapter sequences
-
-### Run the certain subworkflows only
-
-This is a useful entrypoint for running only the preprocessing stage independently or for local debugging.
-
-For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/fspassemblypipeline/usage) and the [parameter documentation](https://nf-co.re/fspassemblypipeline/parameters).
 
 ## Pipeline output
 
