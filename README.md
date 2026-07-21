@@ -27,15 +27,11 @@
 
 ## Pipeline steps
 
-1. Read QC ([`Falco`](https://github.com/smithlabcode/falco) and [`MultiQC`](http://multiqc.info/))
-2. Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging)
-3. K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`](https://github.com/thegenemyers/GENESCOPE.FK))
-4. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler))
-5. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
-6. Selection of the best assembly and subsequent polishing
-7. Final QC for the selected best assembly
-8. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx))
-9. Creation of blobtools directory for contamination removal ([`BlobTools`](https://github.com/drl/blobtools))
+1. Read QC ([`Falco`](https://github.com/smithlabcode/falco), Read preprocessing ([`fastp`](https://github.com/OpenGene/fastp) short reads trimming and merging), K-mer counting ([`FASTK`](https://github.com/thegenemyers/FASTK) and k-mer profiling [`genescopeFK`](https://github.com/thegenemyers/GENESCOPE.FK))
+2. Genome assembly ([`SPAdes`](https://github.com/ablab/spades), [`MEGAHIT`](https://github.com/voutcn/megahit), [`Minia`](https://github.com/GATB/minia), [`ABySS`](https://github.com/bcgsc/abyss), [`SparseAssembler`](https://github.com/yechengxi/SparseAssembler)) and [MaSuRCA](https://github.com/alekseyzimin/masurca/tree/master) 
+3. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK), selection of the best assembly, polishing of the selected assembly and final QC for polished assembly
+4. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx))
+5. Creation of blobtools directory ready for contamination removal ([`BlobTools`](https://github.com/drl/blobtools))
 
 ### Preprocessing
 
@@ -86,7 +82,7 @@ Furthermore, the user can choose to use two different input reads:
 1. forward and reverse reads files
 2. merged reads
 
-The user can choose which k-mer strategies to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
+The user can choose which reads type to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
 
 **Important note: if the user wishes to use merged reads, running the pre-processing step is mandatory.**
 
@@ -106,12 +102,48 @@ A standalone implementation in Snakemake of this part of the pipeline is availab
 
 ### Contamination detection
 
+The contamination detection part of the pipeline is divided in two subworkflows:
+
+1. `subworkflows/local/contamination_detection/main.nf`, which runs FCS-GX and Tiara for taxanomic labelling of contigs and scaffolds and reformats the FCS-GX output for processing
+2. `subworkflows/local/blobtools/main.nf`, which creates a yaml file for each sample and produces a blob directory ready for decontamination
+
+The contamination detection subworkflow runs the following steps:
+- `Tiara` assigns domain level taxonomy and organelle/motrochondrial DNA labels to contigs.
+- `FCS-GX` Assigns species level taxonomy to contigs.
+- `convertrpt` Reformats output of FCS-GX for downstream processing.
+- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot.
+
+The blobtools subworkflow takes the taxonomic labels created in the contamination_detection subworkflow and the GC content and coverage information and
+plots this on a graph allowing for visualisation of contamination. It runs the following steps:
+- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot.
+- `SAMTOOLS_CSI` Indexes the .bam files to produce .bam.csi files as required by blobtools.
+- `blobtoolkit_create` Creates the blobdir from the output of contamination detection and the provided samplesheet.
+
+
 ## Usage
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/get_started/environment_setup/overview) on how to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/get_started/run-your-first-pipeline) with `-profile test` before running the workflow on actual data.
 
 ### Required inputs
+
+#### Samplesheet
+
+<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
+     Explain what rows and columns represent. For instance (please edit as appropriate):
+
+First, prepare a samplesheet with your input data that looks as follows:
+
+`samplesheet.csv`:
+
+```csv
+sample,fastq_1,fastq_2
+CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+```
+
+Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
+
+-->
 
 #### Pre-dowloaded BUSCO lineages
 
@@ -161,21 +193,8 @@ We also need to provide the path to where busco lineages are downloaded in `next
 
 Note that BUSCO automatically downloads lineages in a directory called `lineages`. In `nextflow.config` we need to provide the path to the parent directory of `lineages`. This needs to be the full absolute path.
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
 
-First, prepare a samplesheet with your input data that looks as follows:
-
-`samplesheet.csv`:
-
-```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-```
-
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
+#### FCS-GX database
 
 ### Run the pipeline
 
@@ -192,6 +211,7 @@ nextflow run nf-core/fspassemblypipeline \
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
+
 
 ## Pipeline output
 
