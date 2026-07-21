@@ -25,7 +25,6 @@
 
 ![metromap](docs/images/metro_map_fsp.svg)
 
-
 ## Pipeline steps
 
 1. Read QC ([`Falco`](https://github.com/smithlabcode/falco) and [`MultiQC`](http://multiqc.info/))
@@ -35,7 +34,7 @@
 5. Assembly assessment ([`BUSCO`](https://busco.ezlab.org/), [`QUAST`](http://quast.sourceforge.net/), [`MerquryFK`](https://github.com/thegenemyers/MerquryFK))
 6. Selection of the best assembly and subsequent polishing
 7. Final QC for the selected best assembly
-8. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx)) 
+8. Contamination detection ([`Tiara`](https://github.com/ibe-uw/tiara),[`FCS-GX`](https://github.com/ncbi/fcs-gx))
 9. Creation of blobtools directory for contamination removal ([`BlobTools`](https://github.com/drl/blobtools))
 
 ### Preprocessing
@@ -44,6 +43,7 @@ The preprocessing subworkflow is implemented in `subworkflows/local/preprocessin
 It performs raw read QC, adapter trimming, read merging, QC compilation, and k-mer profiling before downstream assembly and analysis.
 
 The preprocessing subworkflow runs the following steps:
+
 - `FALCO` raw read QC
 - `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
 - `fastp` merge of trimmed reads with merged and unmerged outputs
@@ -53,7 +53,6 @@ The preprocessing subworkflow runs the following steps:
 - `FASTK` k-mer histogram generation
 - `GENESCOPEFK` k-mer profile summarization
 - final k-mer summary table generation
-
 
 ### Genome assembly
 
@@ -103,8 +102,7 @@ The best assembly is then handed over to [pypolca](https://github.com/gbouras13/
 
 The improved best assembly is then quality assessed again with BUSCO, QUAST, and MerquryFK, and aligned back to the reads with [bwa-mem2](https://github.com/bwa-mem2/bwa-mem2) and [samtools](https://github.com/samtools/samtools), which is also used to analyse the genome coverage.
 
-
-A standalone implementation in Snakemake of this part of the pipeline is available at https://github.com/LiaOb21/FSP_assembly_benchmarking. 
+A standalone implementation in Snakemake of this part of the pipeline is available at https://github.com/LiaOb21/FSP_assembly_benchmarking.
 
 ### Contamination detection
 
