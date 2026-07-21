@@ -154,6 +154,48 @@ This is a useful entrypoint for running only the preprocessing stage independent
 
 For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/fspassemblypipeline/usage) and the [parameter documentation](https://nf-co.re/fspassemblypipeline/parameters).
 
+
+## Decontamination subworkflow
+
+The Decontamination subworkflow is implemented in `subworkflows/local/contamination_detection/main.nf`.
+It runs FCS-GX and Tiara for taxanomic labelling of contigs and scaffolds, reformats the FCS-GX output for processing, creates a yaml file for each sample. The output is the handed to the blobtools subworkflow.
+
+### Overview
+
+The contamination detection subworkflow runs the following steps:
+- `Tiara` assigns domain level taxonomy and organelle/motrochondrial DNA labels to contigs.
+- `FCS-GX` Assigns species level taxonomy to contigs.
+- `convertrpt` Reformats output of FCS-GX for downstream processing.
+- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot.
+- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot
+
+### Required inputs
+
+The subworkflow accepts an input samplesheet via `--input`.
+It supports genome assembly fasta files that end in .fa.gz.
+requires an installation of the FCS-GX database.
+
+Optional inputs:
+
+## blobtools subworkflow
+
+The blobtools subworkflow is implemented in `subworkflows/local/blobtools/main.nf`.
+It takes the taxonomic labels created in the contamination_detection subworkflow and the GC content and coverage information and
+plots this on a graph allowing for visualisation of contamination.
+
+### Overview
+
+The blobtools subworkflow runs the following steps:
+- `Create_yaml` Creates a yaml file from the samplesheet to generate the blobplot.
+- `SAMTOOLS_CSI` Indexes the .bam files to produce .bam.csi files as required by blobtools.
+- `blobtoolkit_create` Creates the blobdir from the output of contamination detection and the provided samplesheet.
+
+### Required inputs
+
+needs a .bam coverage file and the output from contamination detection.
+
+Optional inputs:
+
 ## Pipeline output
 
 To see the results of an example test run with a full size dataset refer to the [results](https://nf-co.re/fspassemblypipeline/results) tab on the nf-core website pipeline page.
