@@ -21,7 +21,7 @@
 
 ## Introduction
 
-**RBGKew/fspassemblypipeline** is a comprehensive bioinformatics pipeline genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple k-mer strategy options), genome assembly quality assessment (BUSCO, QUAST), and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium), but it can be used for any paired-end Illumina data.
+**RBGKew/fspassemblypipeline** is a comprehensive bioinformatics pipeline designed for genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple k-mer strategy options), genome assembly quality assessment (completeness, contiguity, accuracy), benchmarking of the assemblies based on the quality and selction of the best one, and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium), but it can be used for any paired-end Illumina data.
 
 ![metromap](docs/images/metro_map_fsp.svg)
 
@@ -84,7 +84,8 @@ Furthermore, the user can choose to use two different input reads:
 
 The user can choose which reads type to use by selecting them through the [`nextflow.config`](nextflow.config). More information about how to set up the `nextflow.config` can be found in [`docs/usage.md`](docs/usage.md).
 
-**Important note: if the user wishes to use merged reads, running the pre-processing step is mandatory.**
+> [!NOTE]
+> **If the user wishes to use merged reads, running the pre-processing step is mandatory.**
 
 The assemblies produced by each assembler for each sample using different settings are then quality inspected with the following tools:
 
@@ -130,21 +131,67 @@ plots this on a graph allowing for visualisation of contamination. It runs the f
 
 #### Samplesheet
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
-
-First, prepare a samplesheet with your input data that looks as follows:
-
-`samplesheet.csv`:
+First, prepare a samplesheet with your input data. The samplesheet for a full run of the pipeline looks as follows:
 
 ```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
+sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum
+sample_1,/path/to/sample_1_R1.fastq.gz,sample_1_R2.fastq.gz,raw,,<TAXID>,<FAM>,<ORD>,<CLA>,<PHY>
+sample_2,/path/to/sample_2_R1.fastq.gz,sample_2_R2.fastq.gz,raw,,,<TAXID>,<FAM>,<ORD>,<CLA>,<PHY>
 ```
 
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
+Each row represents a pair of fastq files (paired end), with the associated metadata (taxid and taxonomy). An example can be found [here](assets/samplesheet.csv).
 
--->
+The samplesheet can also be set up in order to run only a specific subworkflow. This can be achieved as follows:
+
+> [!NOTE]
+> If you wish to run preprocessing only or genome assembly only it is mandatory to set `use_merged_reads = false` in `nextflow.config`
+
+1. Preprocessing only
+
+This setting allows to use the pipeline to only perform the preprocessing of the raw illumina reads. It runs the `subworkflows/local/preprocessing/main.nf`.
+
+```csv
+sample,file_1,file_2,type,fasta,taxid
+sample_1,/path/to/sample_1_R1.fastq.gz,sample_1_R2.fastq.gz,raw,,
+sample_2,/path/to/sample_2_R1.fastq.gz,sample_2_R2.fastq.gz,raw,,
+```
+
+An example can be found [here](assets/samplesheet_preprocessing.csv).
+
+2. Genome assembly only
+
+This setting allows to use the pipeline to only perform the assembly of preprocessed paired-end illumina reads. It runs the `subworkflows/local/genome_assembly/main.nf`.
+
+```csv
+sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum
+sample_1,/path/to/sample_1_R1.clean.fastq.gz,sample_1_R2.clean.fastq.gz,cleaned,,,<FAM>,<ORD>,<CLA>,<PHY>
+sample_2,/path/to/sample_2_R1.clean.fastq.gz,sample_2_R2.clean.fastq.gz,cleaned,cleaned,,,<FAM>,<ORD>,<CLA>,<PHY>
+```
+
+An example can be found [here](assets/samplesheet_assembly.csv).
+
+3. Contamination detection only
+
+> [!NOTE]
+> Fasta files must be gzipped.
+
+```csv
+sample,file_1,file_2,type,fasta,busco,taxid
+sample_1,/path/to/sample_1.bam,,bam,/path/to/sample_1.fasta.gz,/path/to/sample_1/busco/full_table.tsv,<TAXID>
+sample_2,/path/to/sample_2.bam,,bam,/path/to/sample_2.fasta.gz,/path/to/sample_2/busco/full_table.tsv<TAXID>
+```
+
+An example can be found [here](assets/samplesheet_contamination_detection.csv).
+
+4. Preprocessing and assembly
+
+```
+sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum
+sample_1,/path/to/sample_1_R1.fastq.gz,sample_1_R2.fastq.gz,raw,,,<FAM>,<ORD>,<CLA>,<PHY>
+sample_2,/path/to/sample_2_R1.fastq.gz,sample_2_R2.fastq.gz,raw,,,<FAM>,<ORD>,<CLA>,<PHY>
+```
+
+An example can be found [here](assets/samplesheet_preprocessing_and_assembly.csv).
 
 #### Pre-dowloaded BUSCO lineages
 
@@ -196,18 +243,107 @@ Note that BUSCO automatically downloads lineages in a directory called `lineages
 
 #### FCS-GX database
 
+The FCS-GX database is required for the contamination detection. The user should install FCS-GX to be able to proceed. It can be installed via conda:
+
+```
+conda create -n fcsgx ncbi-fcs-gx
+conda activate fcsgx
+```
+
+For a real run, the full database is required and can be downloaded in the following way:
+
+```
+mkdir gxdb
+cd gxdb
+sync_files.py get --mft https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/FCS/database/latest/all.manifest --dir ./gxdb
+```
+
+Note that the full database requires a substantial amount of space.
+
+For a test run, we recommend using the test database. It can be downloaded as follows:
+
+```
+mkdir -p data/gxdb
+cd data/gxdb/
+sync_files.py get --mft https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/FCS/database/test-only/test-only.manifest --dir ./test-only
+```
+
 ### Run the pipeline
 
 Now, you can run the pipeline using:
 
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
-
 ```bash
-nextflow run nf-core/fspassemblypipeline \
+nextflow run RBGKew/fspassemblypipeline \
    -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
+   --input <SAMPLESHEET> \
    --outdir <OUTDIR>
 ```
+
+Below you will find the commands to run a test with the provided test data and samplesheets.
+
+#### Full run
+
+> [!NOTE]
+> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided.
+
+```
+nextflow run . -profile test,docker
+    --input assets/samplesheet.csv
+    --outdir <OUTDIR>
+```
+
+This test runs in approximately 31 minutes using the test profile.
+
+#### Preprocessing only
+
+> [!NOTE]
+> It is mandatory to set `use_merged_reads = false` in `nextflow.config`
+
+```
+nextflow run . -profile test,docker
+    --input assets/samplesheet_raw.csv
+    --outdir <OUTDIR>
+```
+
+This test runs in seconds using the test profile.
+
+#### Genome assembly only
+
+> [!NOTE]
+> It is mandatory to set `use_merged_reads = false` in `nextflow.config`. Also, for testing purposes with the provided samplesheet we reccommend setting `skip_sparseassembler = true` and `skip_masurca = true`, as these two assembler fail with the test data provided.
+
+```
+nextflow run . -profile test,docker
+    --input assets/samplesheet_assembly.csv
+    --outdir <OUTDIR>
+```
+
+This test runs in approximately 22 minutes using the test profile.
+
+#### Contamination detection only
+
+```
+nextflow run . -profile test,docker
+    --input assets/samplesheet_contamination_detection.csv
+    --outdir <OUTDIR>
+```
+
+This test runs in few minutes using the test profile.
+
+#### Preprocessing and genome assembly
+
+> [!NOTE]
+> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in `nextflow.config`
+
+```
+nextflow run . -profile test,docker
+    --input assets/samplesheet_preprocessing_and_assembly.csv
+    --outdir <OUTDIR>
+```
+
+This test requires around 29 minutes to run using the test profile.
+
+#### contamination detection only
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_; see [docs](https://nf-co.re/docs/running/run-pipelines#using-parameter-files).
@@ -220,15 +356,15 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-nf-core/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
+RBGKew/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 
-## Contributions and Support
+<!-- ## Contributions and Support
 
 If you would like to contribute to this pipeline, please see the [contributing guidelines](docs/CONTRIBUTING.md).
 
-For further information or help, don't hesitate to get in touch on the [Slack `#fspassemblypipeline` channel](https://nfcore.slack.com/channels/fspassemblypipeline) (you can join with [this invite](https://nf-co.re/join/slack)).
+For further information or help, don't hesitate to get in touch on the [Slack `#fspassemblypipeline` channel](https://nfcore.slack.com/channels/fspassemblypipeline) (you can join with [this invite](https://nf-co.re/join/slack)).  -->
 
 ## Citations
 
