@@ -109,6 +109,8 @@ workflow FSPASSEMBLYPIPELINE {
     .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
     .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific)
     .map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
+    .filter { meta, files -> meta.taxid }  // only run if taxid is set in samplesheet
+    
     CONTAMINATION_DETECTION(
     ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
     )
