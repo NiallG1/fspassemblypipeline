@@ -162,6 +162,9 @@ An example can be found [here](assets/samplesheet_preprocessing.csv).
 
 This setting allows to use the pipeline to only perform the assembly of preprocessed paired-end illumina reads. It runs the `subworkflows/local/genome_assembly/main.nf`.
 
+> [!NOTE]
+> To run this subworkflow the taxonomy _must_ be provided. However, if you don't have a defined taxonomy for each sample, you can run it anyway by using a place order like "NA" to replace the taxonomic ranks. This means that busco will only run with the lineage provided in the `nextflow.config`
+
 ```csv
 sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum
 sample_1,/path/to/sample_1_R1.clean.fastq.gz,sample_1_R2.clean.fastq.gz,cleaned,,,<FAM>,<ORD>,<CLA>,<PHY>
@@ -184,6 +187,9 @@ sample_2,/path/to/sample_2.bam,,bam,/path/to/sample_2.fasta.gz,/path/to/sample_2
 An example can be found [here](assets/samplesheet_contamination_detection.csv).
 
 4. Preprocessing and assembly
+
+> [!NOTE]
+> The constraint about the taxonomy mentioned above for genome assembly only applies here too.
 
 ```
 sample,file_1,file_2,type,fasta,taxid,family,order,class,phylum

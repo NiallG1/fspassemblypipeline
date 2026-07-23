@@ -22,9 +22,6 @@ process COVERAGEVIZ {
     script:
     def args = task.ext.args ?: ''
     def prefix = task.ext.prefix ?: "${meta.id}"
-    def assembler = task.ext.assembler ?: "$meta.assembler"
-    def reads_type = task.ext.reads_type ?: "$meta.reads_type"
-    def kmer_strategy = task.ext.kmer_strategy ?: "$meta.kmer_strategy"
     """
     coverage_visualisation.py \\
         ${samtools_coverage_output} \\
