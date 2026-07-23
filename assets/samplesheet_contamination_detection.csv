@@ -1,2 +1,3 @@
 sample,file_1,file_2,type,fasta,busco,taxid
-EGP017_25_044,/home/nga10kg/FSP/03_Ready_for_decontamination/EGP017_25_044/best_assembly_info_and_QC/bwa_mem2_samtools_pilon/EGP017_25_044_best_assembly_pilon_sorted.bam,,bam,/home/nga10kg/FSP/03_Ready_for_decontamination/EGP017_25_044/EGP017_25_044_best_assembly.fa.gz,/home/nga10kg/FSP/03_Ready_for_decontamination/EGP017_25_044/best_assembly_info_and_QC/busco_specific_pilon/full_table.tsv,1354922
+sample_1,./assets/dataset/for_contamination_detection/sample_1/sample_1.bam,,bam,./assets/dataset/for_contamination_detection/sample_1/sample_1_corrected.fasta.gz,./assets/dataset/for_contamination_detection/sample_1/full_table.tsv,3040140
+sample_2,./assets/dataset/for_contamination_detection/sample_2/sample_2.bam,,bam,./assets/dataset/for_contamination_detection/sample_2/sample_2_corrected.fasta.gz,./assets/dataset/for_contamination_detection/sample_2/full_table.tsv,28565

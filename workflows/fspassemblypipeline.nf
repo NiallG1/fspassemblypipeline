@@ -85,16 +85,32 @@ workflow FSPASSEMBLYPIPELINE {
         ch_draft_assemblies_merged = GENOME_ASSEMBLY_MERGED.out.draft_assemblies_merged
     }
 
+    // To avoid triggering SELECT_BEST_ASSEMBLY_AND_QC when type is 'raw' and no taxonomy is provided
+    // Combine draft assemblies from both assembly workflows
+    ch_assemblies_combined = ch_draft_assemblies_paired.mix(ch_draft_assemblies_merged)
+    // Only pass reads for samples that actually have assemblies
+    ch_reads_for_select = PREPROCESSING.out.fastp_reads
+        .mix(ch_samplesheet.cleaned)
+        .map { meta, reads -> [meta.id, meta, reads] }
+        .join(
+            ch_assemblies_combined
+                .map { meta, _assembly, _name -> [meta.id] }
+                .unique()
+        )
+        .map { _id, meta, reads -> [meta, reads] }
+
     SELECT_BEST_ASSEMBLY_AND_QC(
         ch_draft_assemblies_paired,
         ch_draft_assemblies_merged,
-        PREPROCESSING.out.fastp_reads.mix(ch_samplesheet.cleaned)
+        ch_reads_for_select
     )
 
     ch_contamination_detection_input = SELECT_BEST_ASSEMBLY_AND_QC.out.best_assembly_polished
     .join(SELECT_BEST_ASSEMBLY_AND_QC.out.bwamem2_best_assembly_bam)
-    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific).view()
-.map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
+    .join(SELECT_BEST_ASSEMBLY_AND_QC.out.busco_best_assembly_full_table_specific)
+    .map { meta, fa, bam, full_table -> [meta, [fa, bam, full_table]] }
+    .filter { meta, files -> meta.taxid }  // only run if taxid is set in samplesheet
+
     CONTAMINATION_DETECTION(
     ch_contamination_detection_input.mix(ch_samplesheet.bam)     // Channel: [meta, fasta, bam, busco]
     )
