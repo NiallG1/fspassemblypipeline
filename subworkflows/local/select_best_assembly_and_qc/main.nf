@@ -17,6 +17,7 @@ include { SAMTOOLS_FAIDX                                   } from '../../../modu
 include { SAMTOOLS_COVERAGE                                } from '../../../modules/nf-core/samtools/coverage/main'
 include { SAMTOOLS_FLAGSTAT                                } from '../../../modules/nf-core/samtools/flagstat/main'
 include { COVERAGEVIZ                                      } from '../../../modules/local/coverageviz/main'
+include { EXTRACTASSEMBLYMETRICS                            } from '../../../modules/local/extractassemblymetrics/main'
 
 workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
@@ -295,6 +296,25 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
 
     COVERAGEVIZ ( ch_coverageviz_input )
 
+    // Join all per-sample final QC outputs by meta.id
+    def ch_metrics_input = BUSCO_FINAL.out.short_summaries_txt
+        .join(BUSCO_SPECIFIC_FINAL.out.short_summaries_txt, by: 0)
+        .join(QUAST_FINAL.out.results, by: 0)
+        .join(MERQURYFK_FINAL.out.qv, by: 0)
+        .join(MERQURYFK_FINAL.out.stats, by: 0)
+        .join(COVERAGEVIZ.out.summary, by: 0)
+
+    EXTRACTASSEMBLYMETRICS( ch_metrics_input )
+
+    // Merge all per-sample rows into one CSV (collectFile handles the header)
+    def ch_all_metrics = EXTRACTASSEMBLYMETRICS.out.metrics_row.collectFile(
+        name: 'assembly_metrics.tsv',
+        keepHeader: true,
+        skip: 1,  // skip header in all but first file
+        sort: true, // sort by sample id
+        storeDir: "${params.outdir}/genome_assembly"
+    )
+
     emit:
     // Fastk outputs (needed as input for merquryfk)
     fastk_ktab                                           = FASTK_ASM.out.ktab
@@ -330,4 +350,5 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     samtools_best_assembly_flagstat                      = SAMTOOLS_FLAGSTAT.out.flagstat
     coverageviz_best_assembly_coverage_plot              = COVERAGEVIZ.out.png
     coverageviz_best_assembly_coverage_summary           = COVERAGEVIZ.out.summary
+    assembly_metrics                                     = ch_all_metrics
 }
