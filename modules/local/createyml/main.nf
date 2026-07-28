@@ -12,7 +12,7 @@ process CREATE_PROJECT_YAML {
 
     output:
     tuple val(meta), path("${meta.id}.yaml"), emit: yaml
-    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_create_project_yaml    
+    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_create_project_yaml
 
     when:
     task.ext.when == null || task.ext.when
