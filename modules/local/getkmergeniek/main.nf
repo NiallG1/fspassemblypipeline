@@ -12,6 +12,7 @@ process GETKMERGENIEK {
 
     output:
     tuple val(meta), path("*.txt"), emit: kmer_txt
+    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_getkmergeniek
 
     when:
     task.ext.when == null || task.ext.when

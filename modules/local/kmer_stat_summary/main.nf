@@ -17,6 +17,7 @@ process KMER_STAT_SUMMARY {
     output:
     path('statistics/statistics_all.csv'), emit: stats_all
     path('statistics/kmer_profile_statistics_automated.csv'), emit: summary
+    tuple val("${task.process}"), val('python'), eval("python --version"), topic: versions, emit: versions_kmer_stat_summary
 
     script:
     def fastk_hist_args = (fastk_hists instanceof List ? fastk_hists : [fastk_hists]).collect { "\"${it}\"" }.join(' ')

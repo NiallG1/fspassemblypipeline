@@ -11,6 +11,7 @@ process FQSTAT_SUMMARY {
 
     output:
     path('fq_stats.summary.*.txt'), emit: summary
+    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_fqstat_summary
 
     script:
     def stats_file_list = stats_files instanceof List ? stats_files : [stats_files]
