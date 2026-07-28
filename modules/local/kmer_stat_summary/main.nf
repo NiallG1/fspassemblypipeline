@@ -3,8 +3,8 @@ process KMER_STAT_SUMMARY {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'oras://community.wave.seqera.io/library/python_pip_numpy_pandas:0f1c9045fe326238' :
-        'community.wave.seqera.io/library/python_pip_numpy_pandas:0f1c9045fe326238' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/81/81fd170d9d2bd4aa6561ccd1638a79e27895e4884753200237b6695e626794d2/data':
+        'community.wave.seqera.io/library/matplotlib_numpy_pandas_python:a03b8e12185b7953' }"
 
     input:
     path(fastk_hists)
@@ -17,6 +17,7 @@ process KMER_STAT_SUMMARY {
     output:
     path('statistics/statistics_all.csv'), emit: stats_all
     path('statistics/kmer_profile_statistics_automated.csv'), emit: summary
+    tuple val("${task.process}"), val('python'), eval("python --version"), topic: versions, emit: versions_kmer_stat_summary
 
     script:
     def fastk_hist_args = (fastk_hists instanceof List ? fastk_hists : [fastk_hists]).collect { "\"${it}\"" }.join(' ')

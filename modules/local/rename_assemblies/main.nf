@@ -14,6 +14,7 @@ process RENAME_ASSEMBLIES {
 
     output:
     tuple val(meta), path("${new_name}.gz"), emit: renamed_assemblies
+    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_rename_assemblies
 
     script:
     def is_gzipped = input_file.toString().endsWith('.gz')

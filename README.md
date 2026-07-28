@@ -23,7 +23,10 @@
 
 **RBGKew/fspassemblypipeline** is a comprehensive bioinformatics pipeline designed for genome assembly from Illumina short-read sequencing data. The pipeline ingests raw paired-end reads and performs quality control, read preprocessing (trimming, merging, removing clean reads less than 30bp and deduplication), k-mer profiling (sequencing depth and genome size estimation), de novo genome assembly (with multiple assembler and multiple k-mer strategy options), genome assembly quality assessment (completeness, contiguity, accuracy), benchmarking of the assemblies based on the quality and selction of the best one, and contamination detection. It is designed to handle challenging samples such as those with degraded DNA from fungal herbarium specimens, as implemented for the Fungarium Sequencing Project at Royal Botanic Gardens, Kew (https://www.kew.org/science/our-science/projects/sequencing-kews-fungarium), but it can be used for any paired-end Illumina data.
 
-![metromap](docs/images/metro_map_fsp.svg)
+![logos](docs/images/FSP_logos.png)
+![metromap](docs/images/fsppipeline_metro_animated.svg)
+
+> In case the image above doesn't load, please have a look at the [static version](docs/images/fsppipeline_metro.svg).
 
 ## Pipeline steps
 
@@ -293,8 +296,8 @@ Below you will find the commands to run a test with the provided test data and s
 > For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided.
 
 ```
-nextflow run . -profile test,docker
-    --input assets/samplesheet.csv
+nextflow run . -profile test,docker \
+    --input assets/samplesheet.csv \
     --outdir <OUTDIR>
 ```
 
@@ -306,8 +309,8 @@ This test runs in approximately 31 minutes using the test profile.
 > It is mandatory to set `use_merged_reads = false` in `nextflow.config`
 
 ```
-nextflow run . -profile test,docker
-    --input assets/samplesheet_raw.csv
+nextflow run . -profile test,docker \
+    --input assets/samplesheet_preprocessing.csv \
     --outdir <OUTDIR>
 ```
 
@@ -319,8 +322,8 @@ This test runs in seconds using the test profile.
 > It is mandatory to set `use_merged_reads = false` in `nextflow.config`. Also, for testing purposes with the provided samplesheet we reccommend setting `skip_sparseassembler = true` and `skip_masurca = true`, as these two assembler fail with the test data provided.
 
 ```
-nextflow run . -profile test,docker
-    --input assets/samplesheet_assembly.csv
+nextflow run . -profile test,docker \
+    --input assets/samplesheet_assembly.csv \
     --outdir <OUTDIR>
 ```
 
@@ -329,8 +332,8 @@ This test runs in approximately 22 minutes using the test profile.
 #### Contamination detection only
 
 ```
-nextflow run . -profile test,docker
-    --input assets/samplesheet_contamination_detection.csv
+nextflow run . -profile test,docker \
+    --input assets/samplesheet_contamination_detection.csv \
     --outdir <OUTDIR>
 ```
 
@@ -342,8 +345,8 @@ This test runs in few minutes using the test profile.
 > For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in `nextflow.config`
 
 ```
-nextflow run . -profile test,docker
-    --input assets/samplesheet_preprocessing_and_assembly.csv
+nextflow run . -profile test,docker \
+    --input assets/samplesheet_preprocessing_and_assembly.csv \
     --outdir <OUTDIR>
 ```
 
@@ -362,7 +365,7 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-RBGKew/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos.
+RBGKew/fspassemblypipeline was originally written by Lia Obinu, Niall Garvey, Chris Wyatt, Fernando Duarte Frutos, Wu Huang.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 

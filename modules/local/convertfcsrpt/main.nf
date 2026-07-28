@@ -3,7 +3,9 @@ process CONVERTFCSRPT {
     label 'process_single'
 
     conda "${moduleDir}/environment.yml"
-    container "community.wave.seqera.io/library/coreutils:8.25--2471b967344e8d86"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/coreutils:9.5' :
+        'quay.io/biocontainers/coreutils:9.5' }"
 
     input:
     tuple val(meta), path(rpt)

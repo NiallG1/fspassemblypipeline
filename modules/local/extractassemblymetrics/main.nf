@@ -14,7 +14,7 @@ process EXTRACTASSEMBLYMETRICS {
 
     output:
     path("${meta.id}_assembly_metrics.tsv"), emit: metrics_row
-    tuple val("${task.process}"), val('python'), eval("python --version"), topic: versions, emit: versions_coverageviz
+    tuple val("${task.process}"), val('python'), eval("python --version"), topic: versions, emit: versions_extractassemblymetrics
 
     when:
     task.ext.when == null || task.ext.when

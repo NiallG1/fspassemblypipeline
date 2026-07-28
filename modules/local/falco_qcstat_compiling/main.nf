@@ -12,6 +12,7 @@ process FALCO_QCSTAT_COMPILING {
 
     output:
     tuple val(qc_subdir), path('QC_*_result.txt'), emit: stats
+    tuple val("${task.process}"), val('bash'), eval("bash --version | head -1 | sed 's/.*version //; s/ .*//'"), topic: versions, emit: versions_falco_qcstat_compiling
 
     script:
     def falco_txt_list = falco_txt_files instanceof List ? falco_txt_files : [falco_txt_files]
