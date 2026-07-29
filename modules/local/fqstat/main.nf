@@ -4,8 +4,8 @@ process FQSTAT {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/37/37069a3c615b14eca87a86992d4b8278b399c2ef763da1e139cf5afad886d1af/data' :
-        'community.wave.seqera.io/library/perl:5.32.1--ede865d0edc4e459' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/18/18a14d4248d24b68ddd07a6ba1988b6a9cc99a134ecce2a4e00521d44ebae200/data' :
+        'community.wave.seqera.io/library/coreutils_gzip_perl:6929d8dfa75ef275' }"
 
     input:
     tuple val(meta), path(fastq_files)
