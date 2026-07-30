@@ -77,6 +77,9 @@ Initial release of nf-core/fspassemblypipeline, created with the [nf-core](https
 - 01/04/2026 - Split the preprocessing PR to four parts, each part origins from newly forked dev from kew repository.
 - 02/04/2026 - Merged local modules and samplesheet PR, updating the part of local modules.
 - 10/04/2026 - updated samplesheet and updated the following modules to latest version and use topic channels: busco, fastp, megahit, minia, quast, seqkit, spades, multiqc.
+- 29/07/2026 - Change the hard coded k=17 to user specifid kmer size, the same with fastk.
+- 29/07/2026 - Updated citations.
+- 30/07/2026 - Updated nf-core TEMPLATE to nf-core 4.1.0
 
 ### `Dependencies`
 

@@ -47,11 +47,11 @@ The preprocessing subworkflow runs the following steps:
 - `fastp` trimming/filtering while keeping complete trimmed R1/R2 output
 - `fastp` merge of trimmed reads with merged and unmerged outputs
 - `FALCO` QC on trimmed and merged reads
-- Falco QC statistics compilation across raw, trimmed, and merged stages
+- `falco_qcstat_compiling` Falco QC statistics compilation across raw, trimmed, and merged stages
 - `FQSTAT` read statistics and summary report generation
 - `FASTK` k-mer histogram generation
 - `GENESCOPEFK` k-mer profile summarization
-- final k-mer summary table generation
+- `kmer_stat_summary` final k-mer summary table generation
 
 ### Genome assembly
 
