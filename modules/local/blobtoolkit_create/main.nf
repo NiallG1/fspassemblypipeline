@@ -56,11 +56,6 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
       --taxdump ${taxdump}  \\
         ${prefix}    
 
-    
-    
-    
-    
-    
     """
 
     stub:
