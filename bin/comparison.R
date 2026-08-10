@@ -59,14 +59,15 @@ tiara <- read.table(
 cat("Loaded", nrow(tiara), "rows from TIARA\n")
 
 # ------------------------------
-# Step 3: Process FCS-GX 
+# Step 3: Process FCS-GX results
 # ------------------------------
- df_fcs <- fcs %>% 
+df_fcs <- fcs %>% 
   select( 
     seq_id = seq.id, 
     seq_len = seq.len, 
     div1 = div, 
-    species_fcs = tax.name.1
+    species_fcs = tax.name.1,
+    taxid_fcs = tax.id.1 
     ) %>% 
   mutate( 
     seq_len = as.numeric(seq_len), 
@@ -91,9 +92,9 @@ cat("Loaded", nrow(tiara), "rows from TIARA\n")
       tolower(div1) == "unknown" ~ "unknown",
       TRUE ~ "unknown" ) )
  
-# # --------------------------------------------
-# # Step 3B: Process FCS-GX results for chimeras 
-# # --------------------------------------------
+# --------------------------------------------
+# Step 3B: Process FCS-GX results for chimeras
+# --------------------------------------------
 df_fcs_collapsed <- df_fcs %>%
   mutate(contig_base = str_remove(seq_id, "~.*")) %>%
   group_by(contig_base) %>%
@@ -119,6 +120,11 @@ df_fcs_collapsed <- df_fcs %>%
       species_fcs %in% c("possible chimera", "possible cross-domain chimera") ~ species_list,
       TRUE ~ NA_character_
     ),
+    
+    taxid = case_when(
+      species_fcs %in% c("possible chimera","possible cross-domain chimera","unknown") ~ "32644",
+      TRUE ~ as.character(first(taxid_fcs[!is.na(taxid_fcs)]))
+    ),
 
     domain_fcs = case_when(
       n_domains == 1 ~ first(domain_fcs[domain_fcs != "unknown"]),
@@ -134,7 +140,7 @@ df_fcs_collapsed <- df_fcs_collapsed %>%
   arrange(as.numeric(stringr::str_extract(seq_id, "(?<=NODE_)\\d+")))
 
 # ------------------------------
-# Step 4: Process Tiara results test
+# Step 4: Process Tiara results
 # ------------------------------
 df_tiara <- tiara %>% 
   mutate( 
@@ -146,9 +152,10 @@ df_tiara <- tiara %>%
   ) %>% 
   select(seq_id = sequence_id, domain_tiara)
 
-# # # ------------------------------
-# # # Step 5: Merge and compare new 
-# # # ------------------------------
+# ------------------------------
+# Step 5: Merge and compare new
+# ------------------------------
+
 df_compare <- df_fcs_collapsed %>%
   left_join(
     df_tiara %>% select(seq_id, domain_tiara),
@@ -156,6 +163,10 @@ df_compare <- df_fcs_collapsed %>%
   ) %>%
   replace_na(list(domain_tiara = "unknown")) %>%
   mutate(
+    taxid = case_when(
+       domain_tiara == "unknown" ~ "32644",
+      TRUE ~ as.character(taxid)
+    ),
     match = case_when(
       species_fcs %in% c("possible chimera", "possible cross-domain chimera") ~ "chimera",
       domain_tiara == domain_fcs ~ "match",
@@ -163,9 +174,9 @@ df_compare <- df_fcs_collapsed %>%
     )
   )
 
-# # -------------------------
-# # step 6: create  blobtags 
-# # -------------------------
+# ------------------------
+# step 6: create  blobtags 
+# ------------------------
 df_compare <- df_compare %>%
   mutate(
     # canonicalize species unknowns (case-insensitive) and trim
@@ -195,11 +206,11 @@ out_file <- paste0(output_prefix, "_tiara_vs_fcs_compare.tsv")
 write_tsv(df_compare, out_file)
 cat("Saved comparison table to:", out_file, "\n")
 
-# # ------------------------------
-# # Step 8: Export comparison CSV
-# # ------------------------------
-# #now all contigs >1kbp are labelled as "unknown"
-# #this is as tiara will not test contigs below 1kbp and FCS-GX is not accurate below 1kbp.
+# -----------------------------
+# Step 8: Export comparison CSV
+# -----------------------------
+#now all contigs >1kbp are labelled as "unknown"
+#this is as tiara will not test contigs below 1kbp and FCS-GX is not accurate below 1kbp.
 
 blob_taxonomy <- df_compare %>%
   select(seq_id, blob_tag) %>%
@@ -209,3 +220,18 @@ blob_taxonomy <- df_compare %>%
 blob_file <- paste0(output_prefix, "_blobtools_taxonomy.tsv")
 write_tsv(blob_taxonomy, blob_file)
 cat("Saved blobtools taxonomy to:", blob_file, "\n")
+
+
+# ------------------------------
+# Step 9: create a fake blast tsv with taxid
+# ------------------------------
+# 1=qseqid,2=staxids,3=bitscore,5=sseqid,10=qstart,11=qend,14=evalue
+
+blob_hits <- df_compare %>%
+  select(seq_id, taxid) %>%
+  mutate(bitscore = 1, four = "NA", sseqid = "NA", six = 1, seven = 1, eight = 1, nine = 1, ten = 1, eleven = 1, twele = 1, thirteen = 1, foureen = 1)
+
+# Write it to the output directory
+hits_file <- paste0(output_prefix, "_blobtools_hits.tsv")
+write_tsv(blob_hits, hits_file, col_names = FALSE)
+cat("Saved blobtools hits to:", hits_file, "\n")

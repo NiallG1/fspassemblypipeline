@@ -7,7 +7,8 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     container "docker.io/genomehubs/blobtoolkit:4.4.6"
 
     input:
-    tuple val(meta), path(fasta), path(bam), path(busco), path(yaml), path(index), path(taxonomy)
+    tuple val(meta), path(fasta), path(bam), path(busco), path(yaml), path(index), path(taxonomy), path(hits), path(tiara)
+    path taxdump
 
     output:
     tuple val(meta), path("${meta.id}"), emit: blobdir
@@ -38,10 +39,28 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
     blobtools add \\
        --text ${taxonomy} \\
        --text-delimiter '\t' \\
-       --text-cols 'seq_id=identifiers,taxonomy=taxonomy' \\
+       --text-cols 'seq_id=identifiers,taxonomy=custom_taxonomy' \\
        --text-header \\
-        --key plot.cat=taxonomy \\
         ${prefix}
+    
+    blobtools add \\
+     --text ${tiara} \\
+     --text-delimiter "\t" \\
+      --text-cols "sequence_id=identifiers,class_fst_stage=tiara" \\
+      --text-header \\
+        ${prefix}
+
+    blobtools add \\
+      --hits ${hits} \\
+      --taxrule bestsum \\
+      --taxdump ${taxdump}  \\
+        ${prefix}    
+
+    
+    
+    
+    
+    
     """
 
     stub:

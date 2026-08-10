@@ -46,4 +46,5 @@ workflow CONTAMINATION_DETECTION {
     taxonomy_report        = FCSGX_RUNGX.out.taxonomy_report
     fcsgx_reformatted      = CONVERTFCSRPT.out.fcs_report_reformatted
     blobtools_taxonomy     = COMPARISON.out.blobtools_taxonomy
+    blobtools_hits         = COMPARISON.out.blobtools_hits
 }
