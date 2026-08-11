@@ -8,6 +8,8 @@ workflow BLOBTOOLS {
     take:
     ch_samplesheet
     ch_blobtools_taxonomy
+    ch_tiara_classifications
+    ch_blobtools_hits
 
     main:
     // a channel for each input is create and finally all channels combined into one tuple to give blobtools a single tuple.
@@ -45,6 +47,16 @@ workflow BLOBTOOLS {
                 tuple(meta.id, file)
             }
 
+        ch_hits_keyed = ch_blobtools_hits
+            .map { meta, file ->
+                tuple(meta.id, file)
+            }
+
+        ch_tiara_keyed = ch_tiara_classifications
+            .map { meta, file ->
+                tuple(meta.id, file)
+            }
+
 
         ch_samtools = ch_samplesheet
             .map { meta, files ->
@@ -66,14 +78,16 @@ workflow BLOBTOOLS {
             .join(ch_yaml_keyed)
             .join(ch_samtools_keyed)
             .join(ch_taxonomy_keyed)
-            .map { id, meta, fasta, bam, busco, yaml, index, taxonomy ->
-                tuple(meta, fasta, bam, busco, yaml, index, taxonomy)
+            .join(ch_hits_keyed)
+            .join(ch_tiara_keyed)
+            .map { id, meta, fasta, bam, busco, yaml, index, taxonomy, hits, tiara ->
+                tuple(meta, fasta, bam, busco, yaml, index, taxonomy, hits, tiara)
             }
-            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, busco, yaml, index, taxonomy): ${it}" }
+            .view { "Final input to BLOBTOOLKIT (meta, fasta, bam, busco, yaml, index, taxonomy, hits, tiara): ${it}" }
         //
         // Create Blobtools dataset files
         //
-        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk)
+        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk, params.taxdump)
 
     emit:
     blobdir  = BLOBTOOLKIT_CREATEBLOBDIR.out.blobdir

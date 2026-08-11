@@ -318,8 +318,7 @@
             "default": "fungi_odb12"
         },
         "busco_lineages_path": {
-            "type": "string",
-            "default": "/home/lobinu/git_repos/fspassemblypipeline/data"
+            "type": "string"
         },
         "busco_config_file": {
             "type": "string"
