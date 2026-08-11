@@ -8,7 +8,7 @@ workflow BLOBTOOLS {
     take:
     ch_samplesheet
     ch_blobtools_taxonomy
-    ch_tiara_classifications 
+    ch_tiara_classifications
     ch_blobtools_hits
 
     main:
@@ -55,7 +55,7 @@ workflow BLOBTOOLS {
         ch_tiara_keyed = ch_tiara_classifications
             .map { meta, file ->
                 tuple(meta.id, file)
-            }        
+            }
 
 
         ch_samtools = ch_samplesheet

@@ -42,7 +42,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
        --text-cols 'seq_id=identifiers,taxonomy=custom_taxonomy' \\
        --text-header \\
         ${prefix}
-    
+
     blobtools add \\
      --text ${tiara} \\
      --text-delimiter "\t" \\
@@ -54,7 +54,7 @@ process BLOBTOOLKIT_CREATEBLOBDIR {
       --hits ${hits} \\
       --taxrule bestsum \\
       --taxdump ${taxdump}  \\
-        ${prefix}    
+        ${prefix}
 
     """
 

@@ -61,37 +61,37 @@ cat("Loaded", nrow(tiara), "rows from TIARA\n")
 # ------------------------------
 # Step 3: Process FCS-GX results
 # ------------------------------
-df_fcs <- fcs %>% 
-  select( 
-    seq_id = seq.id, 
-    seq_len = seq.len, 
-    div1 = div, 
+df_fcs <- fcs %>%
+  select(
+    seq_id = seq.id,
+    seq_len = seq.len,
+    div1 = div,
     species_fcs = tax.name.1,
-    taxid_fcs = tax.id.1 
-    ) %>% 
-  mutate( 
-    seq_len = as.numeric(seq_len), 
+    taxid_fcs = tax.id.1
+    ) %>%
+  mutate(
+    seq_len = as.numeric(seq_len),
     div1 = ifelse(
       is.na(div1) | div1 == "" | tolower(div1) %in% c("unassigned", "unknown"),
-      "unknown", 
+      "unknown",
       div1
     ),
     species_fcs = ifelse(
-      is.na(species_fcs) | species_fcs == "" 
+      is.na(species_fcs) | species_fcs == ""
       | tolower(species_fcs) == "unknown",
-      "unknown", species_fcs), 
-    div1 = str_trim(div1), 
-    species_fcs = str_trim(species_fcs), 
-    domain_fcs = case_when( 
-      grepl("^prok", div1, ignore.case = TRUE) | 
-      grepl("^bact", div1, ignore.case = TRUE) ~ "bacteria", 
-      grepl("^arch", div1, ignore.case = TRUE) ~ "archaea", 
-      grepl("^fung", div1, ignore.case = TRUE) | 
-      grepl("^plnt", div1, ignore.case = TRUE) | 
-      grepl("^anml", div1, ignore.case = TRUE) ~ "eukarya", 
+      "unknown", species_fcs),
+    div1 = str_trim(div1),
+    species_fcs = str_trim(species_fcs),
+    domain_fcs = case_when(
+      grepl("^prok", div1, ignore.case = TRUE) |
+      grepl("^bact", div1, ignore.case = TRUE) ~ "bacteria",
+      grepl("^arch", div1, ignore.case = TRUE) ~ "archaea",
+      grepl("^fung", div1, ignore.case = TRUE) |
+      grepl("^plnt", div1, ignore.case = TRUE) |
+      grepl("^anml", div1, ignore.case = TRUE) ~ "eukarya",
       tolower(div1) == "unknown" ~ "unknown",
       TRUE ~ "unknown" ) )
- 
+
 # --------------------------------------------
 # Step 3B: Process FCS-GX results for chimeras
 # --------------------------------------------
@@ -120,7 +120,7 @@ df_fcs_collapsed <- df_fcs %>%
       species_fcs %in% c("possible chimera", "possible cross-domain chimera") ~ species_list,
       TRUE ~ NA_character_
     ),
-    
+
     taxid = case_when(
       species_fcs %in% c("possible chimera","possible cross-domain chimera","unknown") ~ "32644",
       TRUE ~ as.character(first(taxid_fcs[!is.na(taxid_fcs)]))
@@ -142,14 +142,14 @@ df_fcs_collapsed <- df_fcs_collapsed %>%
 # ------------------------------
 # Step 4: Process Tiara results
 # ------------------------------
-df_tiara <- tiara %>% 
-  mutate( 
+df_tiara <- tiara %>%
+  mutate(
     domain_tiara = ifelse(
-      class_fst_stage == "" | tolower(class_fst_stage) == "unknown", 
-      "unknown", 
+      class_fst_stage == "" | tolower(class_fst_stage) == "unknown",
+      "unknown",
       class_fst_stage
-    ), domain_tiara = str_trim(domain_tiara) 
-  ) %>% 
+    ), domain_tiara = str_trim(domain_tiara)
+  ) %>%
   select(seq_id = sequence_id, domain_tiara)
 
 # ------------------------------
@@ -175,7 +175,7 @@ df_compare <- df_fcs_collapsed %>%
   )
 
 # ------------------------
-# step 6: create  blobtags 
+# step 6: create  blobtags
 # ------------------------
 df_compare <- df_compare %>%
   mutate(
