@@ -2,13 +2,14 @@ lint:
   files_exist:
     - conf/igenomes.config
     - conf/igenomes_ignored.config
+    - assets/nf-core-fspassemblypipeline_logo_light.png
   files_unchanged:
     - assets/nf-core-fspassemblypipeline_logo_light.png
     - docs/images/nf-core-fspassemblypipeline_logo_light.png
     - docs/images/nf-core-fspassemblypipeline_logo_dark.png
     - .gitignore
   template_strings:
-    - assets/dataset/EGP017_25_B2_336/best_assembly_info_and_QC/samtools_pypolca/EGP017_25_B2_336_best_assembly_pypolca_sorted.bam
+  multiqc_config: false
 nf_core_version: 4.1.0
 repository_type: pipeline
 template:
