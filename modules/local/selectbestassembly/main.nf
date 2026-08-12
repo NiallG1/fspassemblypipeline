@@ -3,7 +3,7 @@ process SELECTBESTASSEMBLY {
     tag "$meta.id"
     label 'process_single'
 
-    conda "conda-forge::bash=5.2"
+    conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/coreutils:9.5' :
         'quay.io/biocontainers/coreutils:9.5' }"

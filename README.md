@@ -116,7 +116,7 @@ The contamination detection subworkflow runs the following steps:
 - `Tiara` assigns domain level taxonomy and organelle/motrochondrial DNA labels to contigs.
 - `FCS-GX` Assigns species level taxonomy to contigs.
 - `convertrpt` Reformats output of FCS-GX for downstream processing.
-- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot.
+- `Comparison` Compares the domain level assignments of Tiara & FCS-GX and uses this to create labels for the final blobplot. In addition, this formats FCS-GX results in blast-style hits, so that walking through the taxonomy tree is enabled in the blob viewer.
 
 The blobtools subworkflow takes the taxonomic labels created in the contamination_detection subworkflow and the GC content and coverage information and
 plots this on a graph allowing for visualisation of contamination. It runs the following steps:
@@ -277,6 +277,24 @@ cd data/gxdb/
 sync_files.py get --mft https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/FCS/database/test-only/test-only.manifest --dir ./test-only
 ```
 
+> [!NOTE]
+> It's necessary to download the FCS-GX test database and provide the path in `nextflow.config` under `db_path` even when only running the tests, as these files are too big to be included in the repository.
+
+#### Taxdump database
+
+The taxdump database is required for the contamination detection, as it is used to assign higher rank taxonomy to FCS-GX results. This feature allows the user to visualise the blob plot according to different taxonomic levels (e.g. Phylum, Family).
+
+The database can be download as follows:
+
+```
+mkdir -p data/taxdump
+cd data/taxdump
+curl -L ftp://ftp.ncbi.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz | tar xzf -;
+```
+
+> [!NOTE]
+> It's necessary to download the taxdump database and provide the path in `nextflow.config` under `taxdump` even when only running the tests, as these files are too big to be included in the repository.
+
 ### Run the pipeline
 
 Now, you can run the pipeline using:
@@ -290,14 +308,20 @@ nextflow run RBGKew/fspassemblypipeline \
 
 Below you will find the commands to run a test with the provided test data and samplesheets.
 
+> [!NOTE]
+> Do not forget to download FCS-GX database and taxdump database and provide the paths in `nextflow.config` as explained above, even when you are running just a test (in this case, for FCS-GX the test database is enough).
+
 #### Full run
 
 > [!NOTE]
-> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided.
+> For testing purposes with the provided samplesheet we reccommend setting `--skip_abyss`, `--skip_sparseassembler` and `--skip_masurca`, as these assembler fail with the test data provided.
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet.csv \
+    --skip_abyss \
+    --skip_sparseassembler \
+    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
@@ -319,11 +343,13 @@ This test runs in seconds using the test profile.
 #### Genome assembly only
 
 > [!NOTE]
-> It is mandatory to set `use_merged_reads = false` in `nextflow.config`. Also, for testing purposes with the provided samplesheet we reccommend setting `skip_sparseassembler = true` and `skip_masurca = true`, as these two assembler fail with the test data provided.
+> It is mandatory to set `use_merged_reads = false` in `nextflow.config`. Also, for testing purposes with the provided samplesheet we reccommend setting `--skip_sparseassembler` and `--skip_masurca`, as these two assembler fail with the test data provided.
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet_assembly.csv \
+    --skip_sparseassembler \
+    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
@@ -342,11 +368,14 @@ This test runs in few minutes using the test profile.
 #### Preprocessing and genome assembly
 
 > [!NOTE]
-> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in `nextflow.config`
+> For testing purposes with the provided samplesheet we reccommend setting `--skip_abyss`, `--skip_sparseassembler` and `--skip_masurca`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in `nextflow.config`
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet_preprocessing_and_assembly.csv \
+    --skip_abyss \
+    --skip_sparseassembler \
+    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
