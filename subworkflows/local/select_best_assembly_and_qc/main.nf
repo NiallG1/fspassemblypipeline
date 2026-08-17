@@ -168,14 +168,9 @@ workflow SELECT_BEST_ASSEMBLY_AND_QC {
     def ch_reads_asm_joined = ch_selected_best_assembly_by_id.join(ch_fastp_reads_by_id, by: 0)
     .map { id, meta_fa, fa, meta_reads, reads -> [meta_fa + meta_reads, fa, reads] }
 
-    // Split into the two tuples expected by pypolca: one with meta and reads, the other with meta and assembly
-    def ch_pypolca_reads = ch_reads_asm_joined.map { meta_merged, fa, reads -> [meta_merged, reads] }
-    def ch_pypolca_asm   = ch_reads_asm_joined.map { meta_merged, fa, reads -> [meta_merged, fa] }
-
     PYPOLCA_RUN (
-        ch_pypolca_reads,
-        ch_pypolca_asm
-        )
+    ch_reads_asm_joined
+    )
 
 // =================== Best assembly QC =======================
 
