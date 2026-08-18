@@ -1,23 +1,27 @@
-repository_type: pipeline
-
-nf_core_version: 3.5.2
-
 lint:
   files_exist:
     - conf/igenomes.config
     - conf/igenomes_ignored.config
-
+    - assets/nf-core-fspassemblypipeline_logo_light.png
+  files_unchanged:
+    - assets/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_light.png
+    - docs/images/nf-core-fspassemblypipeline_logo_dark.png
+    - .gitignore
+  template_strings:
+  multiqc_config: false
+  included_configs: false
+nf_core_version: 4.1.0
+repository_type: pipeline
 template:
-  org: nf-core
+  author: Lia Obinu, Niall Garvey, Wu Huang, Chris Wyatt, Fernando Duarte Frutos
+  description: Genome assembly pipeline for the Fungarium Sequencing Project, designed to process and assemble genomes from Illumina short reads to be used for research and biodiversity studies.
+  force: false
+  is_nfcore: true
   name: fspassemblypipeline
-  description: Genome assembly pipeline for the Fungarium Sequencing Project, designed
-    to process and assemble genomic data from fungal species, enabling high-quality
-    reference genomes for research and biodiversity studies.
-  author: Lia Obinu, Niall Garvey, Wu Huang
-  version: 1.0.0dev
-  force: true
+  org: nf-core
   outdir: .
   skip_features:
     - igenomes
     - gpu
-  is_nfcore: true
+  version: 1.0.0
