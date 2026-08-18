@@ -314,14 +314,11 @@ Below you will find the commands to run a test with the provided test data and s
 #### Full run
 
 > [!NOTE]
-> For testing purposes with the provided samplesheet we reccommend setting `--skip_abyss`, `--skip_sparseassembler` and `--skip_masurca`, as these assembler fail with the test data provided.
+> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided.
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet.csv \
-    --skip_abyss \
-    --skip_sparseassembler \
-    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
@@ -343,13 +340,11 @@ This test runs in seconds using the test profile.
 #### Genome assembly only
 
 > [!NOTE]
-> It is mandatory to set `use_merged_reads = false` in `nextflow.config`. Also, for testing purposes with the provided samplesheet we reccommend setting `--skip_sparseassembler` and `--skip_masurca`, as these two assembler fail with the test data provided.
+> It is mandatory to set `use_merged_reads = false` in nextflow.config. Also, for testing purposes with the provided samplesheet we reccommend setting `skip_sparseassembler = true` and `skip_masurca = true`, as these two assembler fail with the test data provided.
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet_assembly.csv \
-    --skip_sparseassembler \
-    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
@@ -368,14 +363,11 @@ This test runs in few minutes using the test profile.
 #### Preprocessing and genome assembly
 
 > [!NOTE]
-> For testing purposes with the provided samplesheet we reccommend setting `--skip_abyss`, `--skip_sparseassembler` and `--skip_masurca`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in `nextflow.config`
+> For testing purposes with the provided samplesheet we reccommend setting `skip_abyss = true`, `skip_sparseassembler = true` and `skip_masurca = true`, as these assembler fail with the test data provided. As preprocessing and genome assembly are executed together, in this case merge reads can be enabled in nextflow.config
 
 ```
 nextflow run . -profile test,docker \
     --input assets/samplesheet_preprocessing_and_assembly.csv \
-    --skip_abyss \
-    --skip_sparseassembler \
-    --skip_masurca \
     --outdir <OUTDIR>
 ```
 
