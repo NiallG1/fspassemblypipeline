@@ -87,7 +87,7 @@ workflow BLOBTOOLS {
         //
         // Create Blobtools dataset files
         //
-        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk, params.taxdump)
+        BLOBTOOLKIT_CREATEBLOBDIR(ch_btk, params.taxdump ?: [])
 
     emit:
     blobdir  = BLOBTOOLKIT_CREATEBLOBDIR.out.blobdir

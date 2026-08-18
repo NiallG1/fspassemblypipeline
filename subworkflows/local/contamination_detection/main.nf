@@ -30,7 +30,7 @@ workflow CONTAMINATION_DETECTION {
     TIARA_TIARA(ch_tiara)
 
     // Run FCS-GX contamination screening
-    FCSGX_RUNGX(ch_fcsgx, params.db_path, params.ramdisk_path ?:[])
+    FCSGX_RUNGX(ch_fcsgx, params.db_path ?:[], params.ramdisk_path ?:[])
 
     // Convert FCS-GX report format
     CONVERTFCSRPT(FCSGX_RUNGX.out.taxonomy_report)
