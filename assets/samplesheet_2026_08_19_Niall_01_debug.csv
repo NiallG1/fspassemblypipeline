@@ -1,0 +1,3 @@
+sample,file_1,file_2,type,fasta,busco,taxid
+EGP017_25_018,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_018_best_assembly_pypolca_sorted.bam,,bam,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_018_best_assembly.fa.gz,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_018_best_assembly_full_table.tsv,40294
+EGP017_25_079,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_079_best_assembly_pypolca_sorted.bam,,bam,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_079_best_assembly.fa.gz,/home/nga10kg/FSP/samplesheet_2026_08_19_Niall_01_debug/EGP017_25_079_best_assembly_full_table.tsv,2029616
