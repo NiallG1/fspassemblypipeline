@@ -68,8 +68,9 @@ df_fcs <- fcs %>%
     div1 = div,
     species_fcs = tax.name.1,
     taxid_fcs = tax.id.1
-    ) %>%
+  ) %>%
   mutate(
+    seq_id = as.character(seq_id),   
     seq_len = as.numeric(seq_len),
     div1 = ifelse(
       is.na(div1) | div1 == "" | tolower(div1) %in% c("unassigned", "unknown"),
@@ -77,9 +78,11 @@ df_fcs <- fcs %>%
       div1
     ),
     species_fcs = ifelse(
-      is.na(species_fcs) | species_fcs == ""
-      | tolower(species_fcs) == "unknown",
-      "unknown", species_fcs),
+      is.na(species_fcs) | species_fcs == "" |
+      tolower(species_fcs) == "unknown",
+      "unknown",
+      species_fcs
+    ),
     div1 = str_trim(div1),
     species_fcs = str_trim(species_fcs),
     domain_fcs = case_when(
@@ -90,7 +93,9 @@ df_fcs <- fcs %>%
       grepl("^plnt", div1, ignore.case = TRUE) |
       grepl("^anml", div1, ignore.case = TRUE) ~ "eukarya",
       tolower(div1) == "unknown" ~ "unknown",
-      TRUE ~ "unknown" ) )
+      TRUE ~ "unknown"
+    )
+  )
 
 # --------------------------------------------
 # Step 3B: Process FCS-GX results for chimeras
@@ -136,21 +141,22 @@ df_fcs_collapsed <- df_fcs %>%
     .groups = "drop"
   ) %>%
   rename(seq_id = contig_base)
-df_fcs_collapsed <- df_fcs_collapsed %>%
-  arrange(as.numeric(stringr::str_extract(seq_id, "(?<=NODE_)\\d+")))
+
 
 # ------------------------------
 # Step 4: Process Tiara results
 # ------------------------------
 df_tiara <- tiara %>%
   mutate(
+    seq_id = as.character(sequence_id), 
     domain_tiara = ifelse(
       class_fst_stage == "" | tolower(class_fst_stage) == "unknown",
       "unknown",
       class_fst_stage
-    ), domain_tiara = str_trim(domain_tiara)
+    ),
+    domain_tiara = str_trim(domain_tiara)
   ) %>%
-  select(seq_id = sequence_id, domain_tiara)
+  select(seq_id, domain_tiara)
 
 # ------------------------------
 # Step 5: Merge and compare new
